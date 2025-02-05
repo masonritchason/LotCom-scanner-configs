@@ -29,6 +29,11 @@ function onResult(decodeResults, readerProperties, output) {
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
+            // verify correct amount of fields in code (change codeFieldCount to the number of fields you need)
+            var codeFieldCount = 0;
+            if (!processedResults.length == codeFieldCount) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
+            }
             /**
              * 
              * 
@@ -42,16 +47,16 @@ function onResult(decodeResults, readerProperties, output) {
              * 
              */
             // generate a final output string, send it to the output module, and show a message on the screen
-            var final = generateOutputString(readerProperties, processedResults);
-            output.content = final;
+            var finalOutput = generateOutputString(readerProperties, processedResults);
+            output.content = finalOutput;
             output.OLED = "<Message>";
         // the code scanned matches the previously scanned code
         } else {
-            duplicateScanError();
+            duplicateScanError(output);
         }
     // results do not pass the validations
     } else {
-        previousScan = dataValidationError(decodeResults, output, previousScan);
+        previousScan, output = dataValidationError(decodeResults, output, previousScan);
     }
 }
 
@@ -87,7 +92,7 @@ function processResultString(raw) {
     // split the string into an array by the bar symbol
     var input_list = input_string.split("|");
     // remove whitespace, comma, ampersand, and newline characters from each field
-    for (var i = 0; i < length(input_list); i++) {
+    for (var i = 0; i < input_list.length; i++) {
         _string = input_list[i];
         _string = _string.replace(/\s/g, "");
         _string = _string.replace(/\\000026/g, "");
@@ -106,17 +111,40 @@ function processResultString(raw) {
  * @returns {null}
  */
 function generateOutputString(readerProperties, processedResultList) {
-    // add the scanner information to the output
-    // scanner_name
+    // create a month name -> number conversion dictionary
+    var monthConversions = {
+        "Jan": "01",
+        "Feb": "02",
+        "Mar": "03",
+        "Apr": "04",
+        "May": "05",
+        "Jun": "06",
+        "Jul": "07",
+        "Aug": "08",
+        "Sep": "09",
+        "Oct": "10",
+        "Nov": "11",
+        "Dec": "12"
+    }
+    // get the raw scan date/time information from the Scanner
+    var unformattedDate = String(readerProperties.trigger.creationDate).split(" ");
+    // remove the weekday ([0]) and the timezone information ([5-end])
+    unformattedDate = unformattedDate.slice(1, 5)
+    // convert the month from name to number
+    unformattedDate[0] = monthConversions[unformattedDate[0]]
+    // format the month, day, and year into a date string of format MM/DD/YYYY
+    var formattedDate = unformattedDate[0] + "/" + unformattedDate[1] + "/" + unformattedDate[2]
+    // add the timestamp
+    formattedDate += "-" + unformattedDate[3]
+    // add the Scanner name to the output
     var outputString = String(readerProperties.name);
-    // scan time/date
-    outputString += "," + String(readerProperties.trigger.creationDate).replace(/\s/g, "-");
-    // scan results
-    for (var i = 0; i < length(processedResultList); i++) {
+    // add the Scan date/time to the output
+    outputString += "," + formattedDate;
+    // add the processed Scan results to the output
+    for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);
     }
-    // remove unnecessary GMT from the timestamp
-    outputString = outputString.replace("-GMT-0400-", "");
+    return outputString;
 }
 
 /**
@@ -139,16 +167,17 @@ function duplicateScanError(output) {
  * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
  * @param {*} output - The `output` module created by the Scanner.
  * @param {*} previousScan - The `previousScan` array initialized in the beginning of the script.
+ * @param {string} message - An optional message to show instead of the default Data Validation failure message.
  * @returns {string[]}
  */
-function dataValidationError(decodeResults, output, previousScan) {
+function dataValidationError(decodeResults, output, previousScan, message = "<DataValidationErrorMessage>") {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
-    output.OLED = "Please scan a Master Label to receive a shipment";
+    output.OLED = message;
     output.content = "";
     // update the last scan
     previousScan.shift();
     previousScan.push(decodeResults[0].content);
-    return previousScan
+    return previousScan, output
 }
 
 
@@ -182,11 +211,10 @@ function validatePONumber(string) {
  * @returns {boolean}
  */
 function validatePartNumber(string) {
-	// set regex patterns for Part Number formats
-	var pnPattern1 = /^\w\w-\w\w\w-\w\w\w\w\w-\w\w\w\w$/;
-	var pnPattern2 = /^\w\w-\w\w\w-\w\w\w\w\w-\w\w\w\w-\w\w\w$/;
-	var pnPattern3 = /^\w\w-\w\w\w-\w\w\w\w\w-\w\w\w\w-\w\w$/;
-	var pnPattern4 = /^\w\w-\w\w\w\w-\w\w\w\w\w-\w\w\w\w-\w\w\w$/;
+	// set regex pattern for Part Numbers
+	var pnPattern1 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
+	var pnPattern2 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
+	var pnPattern3 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
 	// check for each of the defined part number formats
 	if (pnPattern1.test(string)) {
 		return true;	
@@ -195,9 +223,6 @@ function validatePartNumber(string) {
 		return true;	
 	}
 	if (pnPattern3.test(string)) {
-		return true;	
-	}
-	if (pnPattern4.test(string)) {
 		return true;	
 	}
 	// none of the checks were successful
@@ -211,7 +236,7 @@ function validatePartNumber(string) {
  */
 function validateDateNoTime(string) {
     // set a regex pattern for Date format
-    var datePattern = /^\d\d\/\d\d\/\d\d\d\d$/;
+    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d$/;
 	if (datePattern.test(string)) {
 		return true;	
 	} else {
@@ -243,7 +268,7 @@ function validateJBKNumber(string) {
     var jbkPattern = /^[\d]?[\d]?[\d]$/;
     if (jbkPattern.test(string)) {
         // ensure JBK is three digits by adding 0s
-        while (length(string) < 3) {
+        while (string.length < 3) {
             string = "0" + string;
         }
 		return [true, string];	
