@@ -1,10 +1,11 @@
 
+/**
+ * Template Scanner Configuration.
+ * 
+ * Boilerplate code for all Scanner Configurations.
+ */
 
-// Template Scanner Configuration
-// Boilerplate code for all Scanner Configurations
 
-
-// initialize variables
 // holds the previous scan result
 var previousScan = [""];
 // used to hold comparison of previous and current scan result
@@ -29,7 +30,16 @@ function onResult(decodeResults, readerProperties, output) {
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
             /**
+             * 
+             * 
+             * 
+             * 
              * Add additional scan result validation conditions here.
+             * Call the dataValidationError() method if any condition fails.
+             * 
+             * 
+             * 
+             * 
              */
             // generate a final output string, send it to the output module, and show a message on the screen
             var final = generateOutputString(readerProperties, processedResults);
@@ -46,7 +56,9 @@ function onResult(decodeResults, readerProperties, output) {
 }
 
 
-// Helpers
+/**
+ * Helper Methods
+ */
 
 
 /**
@@ -74,12 +86,13 @@ function processResultString(raw) {
 	var input_string = String(raw);
     // split the string into an array by the bar symbol
     var input_list = input_string.split("|");
-    // remove whitespace, ampersand, and newline characters from each field
+    // remove whitespace, comma, ampersand, and newline characters from each field
     for (var i = 0; i < length(input_list); i++) {
         _string = input_list[i];
         _string = _string.replace(/\s/g, "");
         _string = _string.replace(/\\000026/g, "");
         _string = _string.replace(/\n/g, "");
+        _string = _string.replace(",", "")
         input_list[i] = _string;
     }
 	// return the processed result array
@@ -138,6 +151,16 @@ function dataValidationError(decodeResults, output, previousScan) {
     return previousScan
 }
 
+
+/**
+ * Format Validator Methods.
+ * 
+ * Call each to validate the needed fields for each Label type.
+ * 
+ * Remove unused methods to avoid loading useless script onto the Scanner.
+ */
+
+
 /**
  * Validates a string as a PO Number using a regular expression test.
  * @param {string} string 
@@ -145,7 +168,7 @@ function dataValidationError(decodeResults, output, previousScan) {
  */
 function validatePONumber(string) {
 	// set a regex pattern for PO Number format (0-9A-Za-z-_) and check it
-	var poPattern = /^[\w\d\-\_]+$/;
+	var poPattern = /^[\w\-]+$/;
 	if (poPattern.test(string)) {
 		return true;	
 	} else {
@@ -181,18 +204,110 @@ function validatePartNumber(string) {
 	return false;
 }
 
-function validateDateNoTime(string) {}
+/**
+ * Validates a string as a Date (without a timestamp) using a regular expression test.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateDateNoTime(string) {
+    // set a regex pattern for Date format
+    var datePattern = /^\d\d\/\d\d\/\d\d\d\d$/;
+	if (datePattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
 
-function validateShift(string) {}
+/**
+ * Validates a string as a Shift Number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateShiftNumber(string) {
+    // check that the string is 1, 2, or 3
+    if (["1", "2", "3"].includes(string)) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
-function validatePartName(string) {}
+/**
+ * Validates a string as a JBK Number. Enforces three-length format; returns the string in this format.
+ * @param {string} string 
+ * @returns {boolean | Array}
+ */
+function validateJBKNumber(string) {
+    // set a regex pattern for JBK numbers
+    var jbkPattern = /^[\d]?[\d]?[\d]$/;
+    if (datePattern.test(string)) {
+        // ensure JBK is three digits by adding 0s
+        while (length(string) < 3) {
+            string = "0" + string;
+        }
+		return [true, string];	
+	} else {
+        return false;
+    }
+}
 
-function validateJBKNumber(string) {}
+/**
+ * Validates a string as a Lot Number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateLotNumber(string) {
+    // set a regex pattern for Lot numbers
+    var lotPattern = /^[\w]+$/;
+    if (lotPattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
 
-function validateLotNumber(string) {}
+/**
+ * Validates a string as a Model number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateModel(string) {
+    // set a regex pattern for Model numbers
+    var modelPattern = /^\w\w\w$/;
+    if (modelPattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
 
-function validateModel(string) {}
+/**
+ * Validates a string as a Quantity.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateQuantity(string) {
+    // set a regex pattern for Quantities
+    var quantityPattern = /^\d+$/;
+    if (quantityPattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
 
-function validateQuantity(string) {}
-
-function validateDieNumber(string) {}
+/**
+ * Validates a string as a Die Number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateDieNumber(string) {
+    // set a regex pattern for Die Numbers
+    var diePattern = /^\d?\d?\d$/;
+    if (diePattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
