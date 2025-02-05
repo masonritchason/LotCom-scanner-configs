@@ -225,7 +225,7 @@ function validateShiftNumber(string) {
 function validateJBKNumber(string) {
     // set a regex pattern for JBK numbers
     var jbkPattern = /^[\d]?[\d]?[\d]$/;
-    if (datePattern.test(string)) {
+    if (jbkPattern.test(string)) {
         // ensure JBK is three digits by adding 0s
         while (length(string) < 3) {
             string = "0" + string;
