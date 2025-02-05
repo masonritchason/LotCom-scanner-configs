@@ -252,7 +252,7 @@ function validateDateNoTime(string) {
  */
 function validateShiftNumber(string) {
     // check that the string is 1, 2, or 3
-    if (["1", "2", "3"].includes(string)) {
+    if (string == "1" || string == "2" || string == "3") {
         return true;
     } else {
         return false;

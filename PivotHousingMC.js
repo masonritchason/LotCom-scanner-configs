@@ -31,24 +31,25 @@ function onResult(decodeResults, readerProperties, output) {
             // verify correct amount of fields in code (change codeFieldCount to the number of fields you need)
             var codeFieldCount = 6;
             if (!processedResults.length == codeFieldCount) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Deburr Label.");
             }
-            /**
-             * 
-             * 
-             * 
-             * 
-             * Add additional scan result validation conditions here.
-             * Call the dataValidationError() method if any condition fails.
-             * 
-             * 
-             * 
-             * 
-             */
-            // generate a final output string, send it to the output module, and show a message on the screen
-            var finalOutput = generateOutputString(readerProperties, processedResults);
-            output.content = finalOutput;
-            output.OLED = "<Message>";
+            // validate each field required for a Deburr Label to be captured
+            if (!validatePartNumber(processedResults[0])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Part Number.");
+            } else if (!validateQuantity(processedResults[2])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Quantity.");
+            } else if (!validateDateNoTime(processedResults[3])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Date.");
+            } else if (!validateShiftNumber(processedResults[4])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Shift Number.");
+            } else if (!validateJBKNumber(processedResults[5])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid JBK Number.");
+            } else {
+                // generate a final output string, send it to the output module, and show a message on the screen
+                var finalOutput = generateOutputString(readerProperties, processedResults);
+                output.content = finalOutput;
+                output.OLED = "Deburr Label captured successfully.";
+            }
         // the code scanned matches the previously scanned code
         } else {
             duplicateScanError(output);
@@ -235,7 +236,7 @@ function validateDateNoTime(string) {
  */
 function validateShiftNumber(string) {
     // check that the string is 1, 2, or 3
-    if (["1", "2", "3"].includes(string)) {
+    if (string == "1" || string == "2" || string == "3") {
         return true;
     } else {
         return false;
