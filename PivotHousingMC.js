@@ -1,9 +1,7 @@
 
 
 /**
- * Template Scanner Configuration.
- * 
- * Boilerplate code for all Scanner Configurations.
+ * Pivot Housing Machining Scanner Configuration.
  */
 
 
@@ -31,7 +29,7 @@ function onResult(decodeResults, readerProperties, output) {
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
             // verify correct amount of fields in code (change codeFieldCount to the number of fields you need)
-            var codeFieldCount = 0;
+            var codeFieldCount = 6;
             if (!processedResults.length == codeFieldCount) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
             }
@@ -171,7 +169,7 @@ function duplicateScanError(output) {
  * @param {string} message - An optional message to show instead of the default Data Validation failure message.
  * @returns {string[]}
  */
-function dataValidationError(decodeResults, output, previousScan, message = "<DataValidationErrorMessage>") {
+function dataValidationError(decodeResults, output, previousScan, message = "Invalid Label. Please scan a Deburr Label.") {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
     output.OLED = message;
     output.content = "";
@@ -190,21 +188,6 @@ function dataValidationError(decodeResults, output, previousScan, message = "<Da
  * Remove unused methods to avoid loading useless script onto the Scanner.
  */
 
-
-/**
- * Validates a string as a PO Number using a regular expression test.
- * @param {string} string 
- * @returns {boolean}
- */
-function validatePONumber(string) {
-	// set a regex pattern for PO Number format (0-9A-Za-z-_) and check it
-	var poPattern = /^[\w\-]+$/;
-	if (poPattern.test(string)) {
-		return true;	
-	} else {
-		return false;	
-	}	
-}
 
 /**
  * Validates a string as a Part Number using a regular expression test.
@@ -279,36 +262,6 @@ function validateJBKNumber(string) {
 }
 
 /**
- * Validates a string as a Lot Number.
- * @param {string} string 
- * @returns {boolean}
- */
-function validateLotNumber(string) {
-    // set a regex pattern for Lot numbers
-    var lotPattern = /^[\w]+$/;
-    if (lotPattern.test(string)) {
-		return true;	
-	} else {
-        return false;
-    }
-}
-
-/**
- * Validates a string as a Model number.
- * @param {string} string 
- * @returns {boolean}
- */
-function validateModel(string) {
-    // set a regex pattern for Model numbers
-    var modelPattern = /^\w\w\w$/;
-    if (modelPattern.test(string)) {
-		return true;	
-	} else {
-        return false;
-    }
-}
-
-/**
  * Validates a string as a Quantity.
  * @param {string} string 
  * @returns {boolean}
@@ -317,21 +270,6 @@ function validateQuantity(string) {
     // set a regex pattern for Quantities
     var quantityPattern = /^\d+$/;
     if (quantityPattern.test(string)) {
-		return true;	
-	} else {
-        return false;
-    }
-}
-
-/**
- * Validates a string as a Die Number.
- * @param {string} string 
- * @returns {boolean}
- */
-function validateDieNumber(string) {
-    // set a regex pattern for Die Numbers
-    var diePattern = /^\d?\d?\d$/;
-    if (diePattern.test(string)) {
 		return true;	
 	} else {
         return false;
