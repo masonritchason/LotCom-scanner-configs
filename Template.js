@@ -145,6 +145,8 @@ function generateOutputString(readerProperties, processedResultList) {
     for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);
     }
+    // add a newline character to the end of the output
+    outputString += "\n"
     return outputString;
 }
 
