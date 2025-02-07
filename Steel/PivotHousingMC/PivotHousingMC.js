@@ -28,21 +28,21 @@ function onResult(decodeResults, readerProperties, output) {
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
-            // verify correct amount of fields in code (change codeFieldCount to the number of fields you need)
-            var codeFieldCount = 6;
-            if (!processedResults.length == codeFieldCount) {
+            // verify correct previous process (1st field on QR Code)
+            var previousProcess = "Deburr";
+            if (!processedResults[0] == previousProcess) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Deburr Label.");
             }
             // validate each field required for a Deburr Label to be captured
-            if (!validatePartNumber(processedResults[0])) {
+            if (!validatePartNumber(processedResults[1])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Part Number.");
-            } else if (!validateQuantity(processedResults[2])) {
+            } else if (!validateQuantity(processedResults[3])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Quantity.");
-            } else if (!validateDateNoTime(processedResults[3])) {
+            } else if (!validateDateNoTime(processedResults[4])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Date.");
-            } else if (!validateShiftNumber(processedResults[4])) {
+            } else if (!validateShiftNumber(processedResults[5])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Shift Number.");
-            } else if (!validateJBKNumber(processedResults[5])) {
+            } else if (!validateJBKNumber(processedResults[6])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid JBK Number.");
             } else {
                 // generate a final output string, send it to the output module, and show a message on the screen
@@ -136,10 +136,8 @@ function generateOutputString(readerProperties, processedResultList) {
     var formattedDate = unformattedDate[0] + "/" + unformattedDate[1] + "/" + unformattedDate[2]
     // add the timestamp
     formattedDate += "-" + unformattedDate[3]
-    // add the Scanner name to the output
-    var outputString = String(readerProperties.name);
     // add the Scan date/time to the output
-    outputString += "," + formattedDate;
+    var outputString = formattedDate;
     // add the processed Scan results to the output
     for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);

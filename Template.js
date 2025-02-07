@@ -30,9 +30,10 @@ function onResult(decodeResults, readerProperties, output) {
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
-            // verify correct amount of fields in code (change codeFieldCount to the number of fields you need)
-            var codeFieldCount = 0;
-            if (!processedResults.length == codeFieldCount) {
+            // verify correct previous process (1st field on QR Code)
+            /** Enter previous process here */
+            var previousProcess = "";
+            if (!processedResults[0] == previousProcess) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
             }
             /**
@@ -137,10 +138,8 @@ function generateOutputString(readerProperties, processedResultList) {
     var formattedDate = unformattedDate[0] + "/" + unformattedDate[1] + "/" + unformattedDate[2]
     // add the timestamp
     formattedDate += "-" + unformattedDate[3]
-    // add the Scanner name to the output
-    var outputString = String(readerProperties.name);
     // add the Scan date/time to the output
-    outputString += "," + formattedDate;
+    var outputString = formattedDate;
     // add the processed Scan results to the output
     for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);
