@@ -8,7 +8,7 @@
 // holds the previous scan result
 var previousScan = [""];
 // used to hold comparison of previous and current scan result
-var notInLastRead = false;
+var inLastRead = false;
 
 
 /** 
@@ -23,11 +23,13 @@ function onResult(decodeResults, readerProperties, output) {
         // process the initial results ('|' -> ',' and remove all spaces)
 		var processedResults = processResultString(decodeResults[0].content);
         // check the code output against the previously scanned code(s)
-        notInLastRead = isStringNotInArray(previousScan, decodeResults[0].content);
-        if (notInLastRead) {
+        inLastRead = isStringInArray(previousScan, decodeResults[0].content);
+        if (!inLastRead) {
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
+            // create a list of WIP processes allowed in Civic Assembly
+            var allowedProcesses = ["PivotHousingMC", "UppershaftMC", "TiltBracketWeld", "PipeWeld", "ShaftClinch"]
             // create a list of part numbers allowed in Civic Assembly
             var allowedPartNumbers = [
                 "YN-T20-53200-A021-YE1",    // Column Assy, Strg
@@ -58,46 +60,33 @@ function onResult(decodeResults, readerProperties, output) {
                 "00-T6L-53322-H010-YA0",    // STOPPER RING
                 "00-SNA-533AF-A040-Y2"      // STOPPER, SLIDE SHAFT
             ]
-            // verify that the scanned Part Number is acceptable
-            if (isStringNotInArray(allowedPartNumbers, processedResults[1])) {
+            // verify that the scanned Part Number is acceptableSS
+            if (!isStringInArray(allowedPartNumbers, processedResults[1])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
                 return output;
             }
-            // check if the Label is in-house WIP or supplier
-            if (!isStringNotInArray(processedResults[0].replace(" ", ""), ["PivotHousingMC", "UpperShaftMC", "TiltBracketWeld", "PipeWeld", "ShaftClinch"])) {
-                // treat as a supplier Label
-                if (false) {
-                    /**
-                     * 
-                     * Validate Supplier Labels Here!
-                     * 
-                     */
-                // not a valid WIP process Label or Supplier Component Label
-                } else {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
-                    return output;
-                }
-            } else {
-                // treat as an in-house Label; validate quantity and production time for all Labels
+            // check if the Label is in-house WIP
+            if (isStringInArray(allowedProcesses, processedResults[0])) {
+                // in-house Label; validate quantity and production time for all Labels
                 if (!validateQuantity(processedResults[3])) {
                     previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Quantity.");
                     return output;
-                // prod date is always 3rd to last element
-                } else if (!validateDateNoTime(processedResults[processedResults.length - 3])) {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Date: " + processedResults[processedResults.length - 3]);
+                // prod date is always 2nd to last element
+                } else if (!validateDateNoTime(processedResults[processedResults.length - 2])) {
+                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Date.");
                     return output;
-                // prod shift is always 2nd to last element
-                } else if (!validateShiftNumber(processedResults[processedResults.length - 2])) {
+                // prod shift is always last element
+                } else if (!validateShiftNumber(processedResults[processedResults.length - 1])) {
                     previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Shift.");
                     return output;
                 }
                 // validate the remaining, variable Label fields for each Process
                 if (processedResults[0] == "PivotHousingMC") {
                     // validate as PH M/C Label
-                    if (!validateJBKNumber(processedResults[7])) {
+                    if (!validateJBKNumber(processedResults[4])) {
                         previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid JBK #.");
                         return output;
-                    } else if (!validateJBKNumber(processedResults[4])) {
+                    } else if (!validateJBKNumber(processedResults[5])) {
                         previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Deburr JBK #.");
                         return output;
                     }
@@ -113,6 +102,19 @@ function onResult(decodeResults, readerProperties, output) {
                         previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Model #.");
                         return output;
                     }
+                }
+            // otherwise is a supplier label or an invalid Label
+            } else {
+                if (false) {
+                    /**
+                     * 
+                     * Validate Supplier Labels Here!
+                     * 
+                     */
+                // not a valid WIP process Label or Supplier Component Label
+                } else {
+                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                    return output;
                 }
             }
             // generate a final output string, send it to the output module, and show a message on the screen
@@ -142,13 +144,13 @@ function onResult(decodeResults, readerProperties, output) {
  * @param {String} string - The string to search `array` for.
  * @returns {boolean}
  */
-function isStringNotInArray(array, string) {
+function isStringInArray(array, string) {
 	for (var i = 0; i < array.length; i++) {
-		if (array[i] === string) {
-			return false;
+		if (array[i] == string) {
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 /**
