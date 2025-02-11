@@ -56,60 +56,70 @@ function onResult(decodeResults, readerProperties, output) {
                 "YN-3W0-53310-A000-YB3",    // SHAFT COMP, STRG (NO)
                 "YN-3W0-53310-A100-Y02",    // SHAFT COMP, STRG (ELC)
                 "00-T6L-53322-H010-YA0",    // STOPPER RING
-                "00-SNA-533AF-A040-Y2"     // STOPPER, SLIDE SHAFT
+                "00-SNA-533AF-A040-Y2"      // STOPPER, SLIDE SHAFT
             ]
-            // verify that that scanned Part Number is acceptable
+            // verify that the scanned Part Number is acceptable
             if (isStringNotInArray(allowedPartNumbers, processedResults[1])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                return output;
             }
             // check if the Label is in-house WIP or supplier
-            if (isStringNotInArray(processedResults[0], ["PivotHousingMC", "UpperShaftMC", "TiltBracketWeld", "PipeWeld", "ShaftClinch"])) {
+            if (!isStringNotInArray(processedResults[0].replace(" ", ""), ["PivotHousingMC", "UpperShaftMC", "TiltBracketWeld", "PipeWeld", "ShaftClinch"])) {
                 // treat as a supplier Label
-                /**
-                 * 
-                 * Validate Supplier Labels Here!
-                 * 
-                 */
+                if (false) {
+                    /**
+                     * 
+                     * Validate Supplier Labels Here!
+                     * 
+                     */
+                // not a valid WIP process Label or Supplier Component Label
+                } else {
+                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                    return output;
+                }
             } else {
                 // treat as an in-house Label; validate quantity and production time for all Labels
                 if (!validateQuantity(processedResults[3])) {
                     previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Quantity.");
-                }
-                // prod date is always 2nd to last element
-                if (!validateDateNoTime(processedResults[processedResults.length - 2])) {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Date.");
-                }
-                // prod shift is always last element
-                if (!validateShiftNumber(processedResults[processedResults.length - 1])) {
+                    return output;
+                // prod date is always 3rd to last element
+                } else if (!validateDateNoTime(processedResults[processedResults.length - 3])) {
+                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Date: " + processedResults[processedResults.length - 3]);
+                    return output;
+                // prod shift is always 2nd to last element
+                } else if (!validateShiftNumber(processedResults[processedResults.length - 2])) {
                     previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Shift.");
+                    return output;
                 }
                 // validate the remaining, variable Label fields for each Process
                 if (processedResults[0] == "PivotHousingMC") {
                     // validate as PH M/C Label
-                    if (!validateJBKNumber(processedResults[4])) {
+                    if (!validateJBKNumber(processedResults[7])) {
                         previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid JBK #.");
-                    }
-                    if (!validateJBKNumber(processedResults[5])) {
+                        return output;
+                    } else if (!validateJBKNumber(processedResults[4])) {
                         previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Deburr JBK #.");
+                        return output;
                     }
-                } else {
-                    // all remaining label types must have Lot #
-                    if (!validateLotNumber(processedResults[4])) {
-                        previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Lot #.");
-                    }
-                    // only Pipe Weld and Shaft Clinch have additional verification
-                    if ((processedResults[0] == "PipeWeld") || (processedResults[0] == "ShaftClinch")) {
-                        // validate as Pipe Weld or Shaft Clinch Label
-                        if (!validateModel(processedResults[5])) {
-                            previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Model #.");
-                        }
+                // all remaining label types must have Lot #
+                } else if (!validateLotNumber(processedResults[4])) {
+                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Lot #.");
+                    return output;
+                }
+                // only Pipe Weld and Shaft Clinch have additional verification
+                if ((processedResults[0] == "PipeWeld") || (processedResults[0] == "ShaftClinch")) {
+                    // validate as Pipe Weld or Shaft Clinch Label
+                    if (!validateModel(processedResults[5])) {
+                        previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Model #.");
+                        return output;
                     }
                 }
             }
             // generate a final output string, send it to the output module, and show a message on the screen
             var finalOutput = generateOutputString(readerProperties, processedResults);
             output.content = finalOutput;
-            output.OLED = "<Message>";
+            output.OLED = "Label captured successfully";
+            return output
         // the code scanned matches the previously scanned code
         } else {
             duplicateScanError(output);
