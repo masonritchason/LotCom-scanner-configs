@@ -10,7 +10,7 @@
 // holds the previous scan result
 var previousScan = [""];
 // used to hold comparison of previous and current scan result
-var notInLastRead = false;
+var inLastRead = true;
 
 
 /** 
@@ -25,8 +25,8 @@ function onResult(decodeResults, readerProperties, output) {
         // process the initial results ('|' -> ',' and remove all spaces)
 		var processedResults = processResultString(decodeResults[0].content);
         // check the code output against the previously scanned code(s)
-        notInLastRead = isStringNotInArray(previousScan, decodeResults[0].content);
-        if (notInLastRead) {
+        inLastRead = isStringInArray(previousScan, decodeResults[0].content);
+        if (!inLastRead) {
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
@@ -74,13 +74,13 @@ function onResult(decodeResults, readerProperties, output) {
  * @param {String} string - The string to search `array` for.
  * @returns {boolean}
  */
-function isStringNotInArray(array, string) {
+function isStringInArray(array, string) {
 	for (var i = 0; i < array.length; i++) {
 		if (array[i] === string) {
-			return false;
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 /**
