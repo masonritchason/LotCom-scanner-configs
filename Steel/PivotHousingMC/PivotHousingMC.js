@@ -38,12 +38,12 @@ function onResult(decodeResults, readerProperties, output) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Part Number.");
             } else if (!validateQuantity(processedResults[3])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Quantity.");
-            } else if (!validateDateNoTime(processedResults[4])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Date.");
-            } else if (!validateShiftNumber(processedResults[5])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Shift Number.");
-            } else if (!validateJBKNumber(processedResults[6])) {
+            } else if (!validateJBKNumber(processedResults[4])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid JBK Number.");
+            } else if (!validateDateNoTime(processedResults[5])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Date.");
+            } else if (!validateShiftNumber(processedResults[6])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Deburr Label or Invalid Shift Number.");
             } else {
                 // generate a final output string, send it to the output module, and show a message on the screen
                 var finalOutput = generateOutputString(readerProperties, processedResults);
