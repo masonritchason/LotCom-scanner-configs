@@ -40,12 +40,12 @@ function onResult(decodeResults, readerProperties, output) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Die Number.");
             } else if (!validateQuantity(processedResults[4])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Quantity.");
-            } else if (!validateDateNoTime(processedResults[5])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Date.");
-            } else if (!validateShiftNumber(processedResults[6])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Shift Number.");
-            } else if (!validateJBKNumber(processedResults[7])) {
+            } else if (!validateJBKNumber(processedResults[5])) {
                 previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid JBK Number.");
+            } else if (!validateDateNoTime(processedResults[6])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Date.");
+            } else if (!validateShiftNumber(processedResults[7])) {
+                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Shift Number.");
             } else {
                 // generate a final output string, send it to the output module, and show a message on the screen
                 var finalOutput = generateOutputString(readerProperties, processedResults);
