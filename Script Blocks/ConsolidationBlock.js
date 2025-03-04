@@ -13,6 +13,8 @@
 var previousScan = [""];
 // used to hold comparison of previous and current scan result
 var inLastRead = true;
+// used to hold 1 or 2 partial label scan results for consolidation
+var partialLabelScans = ["", ""]
 
 
 /** 
@@ -29,6 +31,29 @@ function onResult(decodeResults, readerProperties, output) {
         // check the code output against the previously scanned code(s)
         inLastRead = isStringInArray(previousScan, decodeResults[0].content);
         if (!inLastRead) {
+            /**
+             * Partial Check Block
+             */
+            // check if the results are from a Partial Label
+            if (processedResults[0] == "PARTIAL") {
+                // add the RAW scan result to the partial scans store
+                if (partialLabelScans[0] == "") {
+                    partialLabelScans[0] = decodeResults[0].content;
+                    // send first partial message
+                    output.OLED = "First Partial Label stored for Consolidation.";
+                    // output nothing
+                    output.content = "";
+                } else if (partialLabelScans[1] == "") {
+                    partialLabelScans[1] = decodeResults[0].content;
+                    // send second partial message
+                    output.OLED = "Second Partial Label stored for Consolidation.";
+                    // output nothing
+                    output.content = "";
+                // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
+                } else {
+                    consolidationError(decodeResults, output, previousScan, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
+                }
+            }
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
@@ -126,4 +151,147 @@ function consolidatePartialLabels(partialLabel1, partialLabel2) {
 
 function consolidateWithFullLabel(partialLabel, fullLabel) {
 
+}
+
+
+
+
+/**
+ * Helper Methods
+ */
+
+
+/**
+ * Checks the passed Array for the passed String.
+ * @param {string[]} array - The array to search in.
+ * @param {String} string - The string to search `array` for.
+ * @returns {boolean}
+ */
+function isStringInArray(array, string) {
+	for (var i = 0; i < array.length; i++) {
+		if (array[i] === string) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Processes a result string to remove spaces and replace bars with commas.
+ * @param raw - The raw result string from the scanner output.
+ * @returns {string[]}
+ **/
+function processResultString(raw) {
+	// ensure the input is a string
+	var input_string = String(raw);
+    // split the string into an array by the bar symbol
+    var input_list = input_string.split("|");
+    // remove whitespace, comma, ampersand, and newline characters from each field
+    for (var i = 0; i < input_list.length; i++) {
+        _string = input_list[i];
+        _string = _string.replace(/\s/g, "");
+        _string = _string.replace(/\\000026/g, "");
+        _string = _string.replace(/\n/g, "");
+        _string = _string.replace(",", "")
+        input_list[i] = _string;
+    }
+	// return the processed result array
+	return input_list;
+}
+
+/**
+ * Creates a final, formatted string that can be sent to the output module.
+ * @param {Array} readerProperties - The `readerProperties` item created by the Scanner.
+ * @param {string[]} processedResultList - The list of processed fields created by `processResultString()`
+ * @returns {null}
+ */
+function generateOutputString(readerProperties, processedResultList) {
+    // create a month name -> number conversion dictionary
+    var monthConversions = {
+        "Jan": "01",
+        "Feb": "02",
+        "Mar": "03",
+        "Apr": "04",
+        "May": "05",
+        "Jun": "06",
+        "Jul": "07",
+        "Aug": "08",
+        "Sep": "09",
+        "Oct": "10",
+        "Nov": "11",
+        "Dec": "12"
+    }
+    // get the raw scan date/time information from the Scanner
+    var unformattedDate = String(readerProperties.trigger.creationDate).split(" ");
+    // remove the weekday ([0]) and the timezone information ([5-end])
+    unformattedDate = unformattedDate.slice(1, 5)
+    // convert the month from name to number
+    unformattedDate[0] = monthConversions[unformattedDate[0]]
+    // format the month, day, and year into a date string of format MM/DD/YYYY
+    var formattedDate = unformattedDate[0] + "/" + unformattedDate[1] + "/" + unformattedDate[2]
+    // add the timestamp
+    formattedDate += "-" + unformattedDate[3]
+    // add the Scan date/time to the output
+    var outputString = formattedDate;
+    // add the processed Scan results to the output
+    for (var i = 0; i < processedResultList.length; i++) {
+        outputString += "," + String(processedResultList[i]);
+    }
+    // add a newline character to the end of the output
+    outputString += "\n"
+    return outputString;
+}
+
+/**
+ * Throws a duplicate scan error to the Scanner. 
+ * Sends a data validation failure command, sends a warning to the screen, and voids output.
+ * @param {Array} output - The output module generated by the Scanner.
+ * @returns {null}
+ */
+function duplicateScanError(output) {
+    dmccCommand("OUTPUT.DATAVALID-FAIL");
+    output.OLED = "Duplicate Label scanned";
+    output.content = "";
+}
+
+/**
+ * Throws a data validation error to the Scanner.
+ * Sends a data validation failure command, sends a warning to the screen, and voids output.
+ * Additionally, shifts `previousScan` to the `decodeResults` content. 
+ * Returns the new `previousScan` array.
+ * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
+ * @param {*} output - The `output` module created by the Scanner.
+ * @param {*} previousScan - The `previousScan` array initialized in the beginning of the script.
+ * @param {string} message - An optional message to show instead of the default Data Validation failure message.
+ * @returns {string[]}
+ */
+function dataValidationError(decodeResults, output, previousScan, message = "<DataValidationErrorMessage>") {
+    dmccCommand("OUTPUT.DATAVALID-FAIL");
+    output.OLED = message;
+    output.content = "";
+    // update the last scan
+    previousScan.shift();
+    previousScan.push(decodeResults[0].content);
+    return previousScan, output
+}
+
+/**
+ * Throws a consolidation error to the Scanner.
+ * Sends a data validation command, sends a warning to the screen, and voids output.
+ * Additionally, shifts `previousScan` to the `decodeResults` content.
+ * Returns the new `previousScan` array
+ * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
+ * @param {*} output - The `output` module created by the Scanner.
+ * @param {*} previousScan - The `previousScan` array initialized in the beginning of the script.
+ * @param {string} message - An optional message to show instead of the default Data Validation failure message.
+ * @returns {string[]}
+ */
+function consolidationError(decodeResults, output, previousScan, message = "<ConsolidationErrorMessage>") {
+    dmccCommand("OUTPUT.DATAVALID-FAIL");
+    output.OLED = message;
+    output.content = "";
+    // update the last scan
+    previousScan.shift();
+    previousScan.push(decodeResults[0].content);
+    return previousScan, output
 }
