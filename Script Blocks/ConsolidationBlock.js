@@ -26,14 +26,16 @@ var partialLabelScans = ["", ""]
 function onResult(decodeResults, readerProperties, output) {
 	// if the result was successfully decoded
 	if (decodeResults[0].decoded) {
-        // process the initial results ('|' -> ',' and remove all spaces)
-		var processedResults = processResultString(decodeResults[0].content);
+        // save the raw results
+        var rawResults = decodeResults[0].content;
         // check the code output against the previously scanned code(s)
-        inLastRead = isStringInArray(previousScan, decodeResults[0].content);
+        inLastRead = isStringInArray(previousScan, rawResults);
         if (!inLastRead) {
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
-            previousScan.push(decodeResults[0].content);
+            previousScan.push(rawResults);
+            // process the initial results
+            var processedResults = processResultString(rawResults);
             // perform partial checks
             var checkResults = checkAndProcessPartialLabel(processedResults, partialLabelScans, decodeResults, output, previousScan);
             // if the label was partial, use the output module from the method
@@ -94,11 +96,9 @@ function onResult(decodeResults, readerProperties, output) {
  * @returns {string | null} Consolidated Partial Label string; null if serial numbers do not match.
  */
 function consolidatePartialLabels(partialLabel1, partialLabel2) {
-    // split the labels by the bar symbol delimiter
-    var splitLabel1 = partialLabel1.split("|");
-    var splitLabel2 = partialLabel2.split("|");
-    // verify that the two Labels have a matching serial number
-    if (splitLabel1[4] != splitLabel2[4]) {
+    // confirm matching serial numbers
+    var matching = checkMatchingSerialNumbers(partialLabel1, partialLabel2);
+    if (!matching) {
         return null;
     }
     // retrieve the quantity, shift, and operator information from each Split Label
@@ -232,6 +232,20 @@ function generateOutputString(readerProperties, processedResultList) {
 }
 
 /**
+ * Compares the serial numbers of two Partial Labels.
+ * @param {string} partialLabel1 the first (earlier) partial label to consolidate FROM.
+ * @param {string} partialLabel2 the second (later) partial label to consolidate TO.
+ * @returns `true` on match; `false` on mismatch.
+ */
+function checkMatchingSerialNumbers(partialLabel1, partialLabel2) {
+    // split the labels by the bar symbol delimiter
+    var splitLabel1 = partialLabel1.split("|");
+    var splitLabel2 = partialLabel2.split("|");
+    // verify that the two Labels have a matching serial number in position 4 (5th field)
+    return (splitLabel1[4] == splitLabel2[4]);
+}
+
+/**
  * Checks if a scan result is a Partial Label and processes it if so.
  * @param {string[]} processedResults a processed scan result from `processResultString()`.
  * @param {string[]} partialLabelScans the `partialLabelScans` store.
@@ -242,26 +256,38 @@ function generateOutputString(readerProperties, processedResultList) {
  */
 function checkAndProcessPartialLabel(processedResults, partialLabelScans, decodeResults, output, previousScan) {
     // check if the results are from a Partial Label
+    var rawResults = decodeResults[0].content;
     var isPartial = false;
     if (processedResults[0] == "PARTIAL") {
         isPartial = true;
         // add the RAW scan result to the partial scans store
         if (partialLabelScans[0] == "") {
-            partialLabelScans[0] = decodeResults[0].content;
+            partialLabelScans[0] = rawResults;
             // send first partial message
             output.OLED = "First Partial Label stored for Consolidation.";
             // output nothing
             output.content = "";
+        // there is already at least one partial label scan stored
         } else if (partialLabelScans[1] == "") {
             // if the first and second scans match, throw duplicate scan error
-            if (partialLabelScans[0] == decodeResults[0].content) {
+            if (partialLabelScans[0] == rawResults) {
                 output = duplicateScanError(output);
+            // the new scan is not a duplicate; verify matching serial numbers
             } else {
-                partialLabelScans[1] = decodeResults[0].content;
-                // send second partial message
-                output.OLED = "Second Partial Label stored for Consolidation.";
-                // output nothing
-                output.content = "";
+                var matching = checkMatchingSerialNumbers(partialLabelScans[0], rawResults);
+                // the serial numbers match; store this second scan
+                if (matching) {
+                    partialLabelScans[1] = rawResults;
+                    // send second partial message
+                    output.OLED = "Second Partial Label stored for Consolidation.";
+                    // output nothing
+                    output.content = "";
+                // the partial label serial numbers do not match; throw consolidation error
+                } else {
+                    var error = consolidationError(decodeResults, output, previousScan, "This Partial Label is for a different Basket. Please consolidate to a Full Label before scanning another Partial Label.");
+                    previousScan = error[0];
+                    output = error[1];
+                }
             }
         // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
         } else {
@@ -297,13 +323,13 @@ function duplicateScanError(output) {
  * @param {string} message - An optional message to show instead of the default Data Validation failure message.
  * @returns {string[]}
  */
-function dataValidationError(decodeResults, output, previousScan, message = "<DataValidationErrorMessage>") {
+function dataValidationError(rawResults, output, previousScan, message = "<DataValidationErrorMessage>") {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
     output.OLED = message;
     output.content = "";
     // update the last scan
     previousScan.shift();
-    previousScan.push(decodeResults[0].content);
+    previousScan.push(rawResults);
     return [previousScan, output];
 }
 
@@ -318,12 +344,12 @@ function dataValidationError(decodeResults, output, previousScan, message = "<Da
  * @param {string} message - An optional message to show instead of the default Data Validation failure message.
  * @returns {string[]}
  */
-function consolidationError(decodeResults, output, previousScan, message = "<ConsolidationErrorMessage>") {
+function consolidationError(rawResults, output, previousScan, message = "<ConsolidationErrorMessage>") {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
     output.OLED = message;
     output.content = "";
     // update the last scan
     previousScan.shift();
-    previousScan.push(decodeResults[0].content);
+    previousScan.push(rawResults);
     return [previousScan, output];
 }
