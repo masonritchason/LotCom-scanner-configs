@@ -44,11 +44,16 @@ function onResult(decodeResults, readerProperties, output) {
                     // output nothing
                     output.content = "";
                 } else if (partialLabelScans[1] == "") {
-                    partialLabelScans[1] = decodeResults[0].content;
-                    // send second partial message
-                    output.OLED = "Second Partial Label stored for Consolidation.";
-                    // output nothing
-                    output.content = "";
+                    // if the first and second scans match, throw duplicate scan error
+                    if (partialLabelScans[0] == decodeResults[0].content) {
+                        duplicateScanError(output);
+                    } else {
+                        partialLabelScans[1] = decodeResults[0].content;
+                        // send second partial message
+                        output.OLED = "Second Partial Label stored for Consolidation.";
+                        // output nothing
+                        output.content = "";
+                    }
                 // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
                 } else {
                     consolidationError(decodeResults, output, previousScan, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
