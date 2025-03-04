@@ -31,37 +31,11 @@ function onResult(decodeResults, readerProperties, output) {
         // check the code output against the previously scanned code(s)
         inLastRead = isStringInArray(previousScan, decodeResults[0].content);
         if (!inLastRead) {
-            /**
-             * Partial Check Block
-             */
-            // check if the results are from a Partial Label
-            if (processedResults[0] == "PARTIAL") {
-                // add the RAW scan result to the partial scans store
-                if (partialLabelScans[0] == "") {
-                    partialLabelScans[0] = decodeResults[0].content;
-                    // send first partial message
-                    output.OLED = "First Partial Label stored for Consolidation.";
-                    // output nothing
-                    output.content = "";
-                } else if (partialLabelScans[1] == "") {
-                    // if the first and second scans match, throw duplicate scan error
-                    if (partialLabelScans[0] == decodeResults[0].content) {
-                        duplicateScanError(output);
-                    } else {
-                        partialLabelScans[1] = decodeResults[0].content;
-                        // send second partial message
-                        output.OLED = "Second Partial Label stored for Consolidation.";
-                        // output nothing
-                        output.content = "";
-                    }
-                // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
-                } else {
-                    consolidationError(decodeResults, output, previousScan, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
-                }
-            }
             // shift out the previous scan and add the new scan into the list
             previousScan.shift();
             previousScan.push(decodeResults[0].content);
+            // perform partial checks
+            var isPartial = checkAndProcessPartialLabel(processedResults);
             // verify correct previous process (1st field on QR Code)
             /** Enter previous process here */
             var previousProcess = "";
@@ -246,6 +220,47 @@ function generateOutputString(readerProperties, processedResultList) {
     outputString += "\n"
     return outputString;
 }
+
+/**
+ * Checks if a scan result is a Partial Label and processes it if so.
+ * @param {string[]} processedResults a processed scan result from `processResultString()`.
+ * @param {string[]} partialLabelScans the `partialLabelScans` store.
+ * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
+ * @param {*} output - The `output` module created by the Scanner.
+ * @param {*} previousScan - The `previousScan` array initialized in the beginning of the script.
+ * @returns {boolean} true if Partial; false if not.
+ */
+function checkAndProcessPartialLabel(processedResults, partialLabelScans, decodeResults, output, previousScan) {
+    // check if the results are from a Partial Label
+    var isPartial = false;
+    if (processedResults[0] == "PARTIAL") {
+        isPartial = true;
+        // add the RAW scan result to the partial scans store
+        if (partialLabelScans[0] == "") {
+            partialLabelScans[0] = decodeResults[0].content;
+            // send first partial message
+            output.OLED = "First Partial Label stored for Consolidation.";
+            // output nothing
+            output.content = "";
+        } else if (partialLabelScans[1] == "") {
+            // if the first and second scans match, throw duplicate scan error
+            if (partialLabelScans[0] == decodeResults[0].content) {
+                duplicateScanError(output);
+            } else {
+                partialLabelScans[1] = decodeResults[0].content;
+                // send second partial message
+                output.OLED = "Second Partial Label stored for Consolidation.";
+                // output nothing
+                output.content = "";
+            }
+        // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
+        } else {
+            consolidationError(decodeResults, output, previousScan, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
+        }
+    }
+    return isPartial;
+}
+
 
 /**
  * Throws a duplicate scan error to the Scanner. 
