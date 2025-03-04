@@ -62,44 +62,60 @@ function onResult(decodeResults, readerProperties, output) {
             ]
             // verify that the scanned Part Number is acceptableSS
             if (!isStringInArray(allowedPartNumbers, processedResults[1])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                previousScan = error[0];
+                output = error[1];
                 return output;
             }
             // check if the Label is in-house WIP
             if (isStringInArray(allowedProcesses, processedResults[0])) {
                 // in-house Label; validate quantity and production time for all Labels
                 if (!validateQuantity(processedResults[3])) {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Quantity.");
+                    var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Quantity.");
+                    previousScan = error[0];
+                    output = error[1];
                     return output;
                 // prod date is always 2nd to last element
                 } else if (!validateDateNoTime(processedResults[processedResults.length - 2])) {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Date.");
+                    var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Date.");
+                    previousScan = error[0];
+                    output = error[1];
                     return output;
                 // prod shift is always last element
                 } else if (!validateShiftNumber(processedResults[processedResults.length - 1])) {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Shift.");
+                    var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Production Shift.");
+                    previousScan = error[0];
+                    output = error[1];
                     return output;
                 }
                 // validate the remaining, variable Label fields for each Process
                 if (processedResults[0] == "PivotHousingMC") {
                     // validate as PH M/C Label
                     if (!validateJBKNumber(processedResults[4])) {
-                        previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid JBK #.");
+                        var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid JBK #.");
+                        previousScan = error[0];
+                        output = error[1];
                         return output;
                     } else if (!validateJBKNumber(processedResults[5])) {
-                        previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Deburr JBK #.");
+                        var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Deburr JBK #.");
+                        previousScan = error[0];
+                        output = error[1];
                         return output;
                     }
                 // all remaining label types must have Lot #
                 } else if (!validateLotNumber(processedResults[4])) {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Lot #.");
+                    var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Lot #.");
+                    previousScan = error[0];
+                    output = error[1];
                     return output;
                 }
                 // only Pipe Weld and Shaft Clinch have additional verification
                 if ((processedResults[0] == "PipeWeld") || (processedResults[0] == "ShaftClinch")) {
                     // validate as Pipe Weld or Shaft Clinch Label
                     if (!validateModel(processedResults[5])) {
-                        previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Model #.");
+                        var error = dataValidationError(decodeResults, output, previousScan, "Invalid WIP Label or Invalid Model #.");
+                        previousScan = error[0];
+                        output = error[1];
                         return output;
                     }
                 }
@@ -113,7 +129,9 @@ function onResult(decodeResults, readerProperties, output) {
                      */
                 // not a valid WIP process Label or Supplier Component Label
                 } else {
-                    previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                    var error = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Civic Process Label.");
+                    previousScan = error[0];
+                    output = error[1];
                     return output;
                 }
             }
@@ -128,7 +146,9 @@ function onResult(decodeResults, readerProperties, output) {
         }
     // results do not pass the validations
     } else {
-        previousScan, output = dataValidationError(decodeResults, output, previousScan);
+        var error = dataValidationError(decodeResults, output, previousScan, "Invalid Label scanned.");
+        previousScan = error[0];
+        output = error[1];
     }
 }
 
@@ -250,7 +270,7 @@ function dataValidationError(decodeResults, output, previousScan, message = "<Da
     // update the last scan
     previousScan.shift();
     previousScan.push(decodeResults[0].content);
-    return previousScan, output
+    return [previousScan, output];
 }
 
 

@@ -34,7 +34,9 @@ function onResult(decodeResults, readerProperties, output) {
             /** Enter previous process here */
             var previousProcess = "";
             if (!processedResults[0] == previousProcess) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
+                previousScan = error[0];
+                output = error[1];
             }
             /**
              * 
@@ -58,7 +60,9 @@ function onResult(decodeResults, readerProperties, output) {
         }
     // results do not pass the validations
     } else {
-        previousScan, output = dataValidationError(decodeResults, output, previousScan);
+        var error = dataValidationError(decodeResults, output, previousScan);
+        previousScan = error[0];
+        output = error[1];
     }
 }
 
@@ -180,7 +184,7 @@ function dataValidationError(decodeResults, output, previousScan, message = "<Da
     // update the last scan
     previousScan.shift();
     previousScan.push(decodeResults[0].content);
-    return previousScan, output
+    return [previousScan, output];
 }
 
 

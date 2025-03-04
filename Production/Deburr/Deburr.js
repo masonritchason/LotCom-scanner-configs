@@ -31,21 +31,35 @@ function onResult(decodeResults, readerProperties, output) {
             // verify correct previous process (1st field on QR Code)
             var previousProcess = "Diecast";
             if (!processedResults[0] == previousProcess) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Diecast Label.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a Diecast Label.");
+                previousScan = error[0];
+                output = error[1];
             }
             // validate each field required for a Diecast Label to be captured
             if (!validatePartNumber(processedResults[1])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Part Number.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Part Number.");
+                previousScan = error[0];
+                output = error[1];
             } else if (!validateDieNumber(processedResults[3])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Die Number.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Die Number.");
+                previousScan = error[0];
+                output = error[1];
             } else if (!validateQuantity(processedResults[4])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Quantity.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Quantity.");
+                previousScan = error[0];
+                output = error[1];
             } else if (!validateJBKNumber(processedResults[5])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid JBK Number.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid JBK Number.");
+                previousScan = error[0];
+                output = error[1];
             } else if (!validateDateNoTime(processedResults[6])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Date.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Date.");
+                previousScan = error[0];
+                output = error[1];
             } else if (!validateShiftNumber(processedResults[7])) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Shift Number.");
+                var error = dataValidationError(decodeResults, output, previousScan, "Invalid Diecast Label or Invalid Shift Number.");
+                previousScan = error[0];
+                output = error[1];
             } else {
                 // generate a final output string, send it to the output module, and show a message on the screen
                 var finalOutput = generateOutputString(readerProperties, processedResults);
@@ -58,7 +72,9 @@ function onResult(decodeResults, readerProperties, output) {
         }
     // results do not pass the validations
     } else {
-        previousScan, output = dataValidationError(decodeResults, output, previousScan);
+        var error = dataValidationError(decodeResults, output, previousScan);
+        previousScan = error[0];
+        output = error[1];
     }
 }
 
@@ -180,7 +196,7 @@ function dataValidationError(decodeResults, output, previousScan, message = "Inv
     // update the last scan
     previousScan.shift();
     previousScan.push(decodeResults[0].content);
-    return previousScan, output
+    return [previousScan, output];
 }
 
 
