@@ -38,37 +38,43 @@ function onResult(decodeResults, readerProperties, output) {
             var checkResults = checkAndProcessPartialLabel(processedResults, partialLabelScans, decodeResults, output, previousScan);
             // if the label was partial, use the output module from the method
             if (checkResults[0]) {
-                output = checkResults[1];
+                previousScan = checkResults[1];
+                output = checkResults[2];
+            } else {
+                // verify correct previous process (1st field on QR Code)
+                /** Enter previous process here */
+                var previousProcess = "4420 - Diecast";
+                if (!processedResults[0] == previousProcess) {
+                    var error = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
+                    previousScan = error[0];
+                    output = error[1];
+                }
+                /**
+                 * 
+                 * 
+                 * 
+                 * 
+                 * Add additional scan result validation conditions here.
+                 * Call the dataValidationError() method if any condition fails.
+                 * 
+                 * 
+                 * 
+                 * 
+                 */
+                // generate a final output string, send it to the output module, and show a message on the screen
+                var finalOutput = generateOutputString(readerProperties, processedResults);
+                output.content = finalOutput;
+                output.OLED = "<Message>";
             }
-            // verify correct previous process (1st field on QR Code)
-            /** Enter previous process here */
-            var previousProcess = "";
-            if (!processedResults[0] == previousProcess) {
-                previousScan, output = dataValidationError(decodeResults, output, previousScan, "Invalid Label. Please scan a <previousProcess> Label.");
-            }
-            /**
-             * 
-             * 
-             * 
-             * 
-             * Add additional scan result validation conditions here.
-             * Call the dataValidationError() method if any condition fails.
-             * 
-             * 
-             * 
-             * 
-             */
-            // generate a final output string, send it to the output module, and show a message on the screen
-            var finalOutput = generateOutputString(readerProperties, processedResults);
-            output.content = finalOutput;
-            output.OLED = "<Message>";
         // the code scanned matches the previously scanned code
         } else {
             output = duplicateScanError(output);
         }
     // results do not pass the validations
     } else {
-        previousScan, output = dataValidationError(decodeResults, output, previousScan);
+        var error = dataValidationError(decodeResults, output, previousScan);
+        previousScan = error[0];
+        output = error[1];
     }
 }
 
@@ -232,7 +238,7 @@ function generateOutputString(readerProperties, processedResultList) {
  * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
  * @param {*} output - The `output` module created by the Scanner.
  * @param {*} previousScan - The `previousScan` array initialized in the beginning of the script.
- * @returns {[boolean, *]} boolean a modified output module to call for the method.
+ * @returns {[boolean, *, *]} `boolean` (is Partial?), `previousScan` store, and modified `output` module.
  */
 function checkAndProcessPartialLabel(processedResults, partialLabelScans, decodeResults, output, previousScan) {
     // check if the results are from a Partial Label
@@ -259,12 +265,13 @@ function checkAndProcessPartialLabel(processedResults, partialLabelScans, decode
             }
         // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
         } else {
-            consolidationError(decodeResults, output, previousScan, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
+            var error = consolidationError(decodeResults, output, previousScan, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
+            previousScan = error[0];
+            output = error[1];
         }
     }
-    return [isPartial, output];
+    return [isPartial, previousScan, output];
 }
-
 
 /**
  * Throws a duplicate scan error to the Scanner. 
@@ -297,7 +304,7 @@ function dataValidationError(decodeResults, output, previousScan, message = "<Da
     // update the last scan
     previousScan.shift();
     previousScan.push(decodeResults[0].content);
-    return previousScan, output
+    return [previousScan, output];
 }
 
 /**
@@ -318,5 +325,5 @@ function consolidationError(decodeResults, output, previousScan, message = "<Con
     // update the last scan
     previousScan.shift();
     previousScan.push(decodeResults[0].content);
-    return previousScan, output
+    return [previousScan, output];
 }
