@@ -104,6 +104,8 @@ function onResult(decodeResults, readerProperties, output) {
     }
     // save the modified output module (this is all that needs to happen if no consolidation was made)
     output = consolidationResults[2];
+    // clear the partial scan store
+    partialScanStore = ["", ""];
 
     // update the processed result to a processed version of the consolidated label (only if a consolidation occurred)
     if (consolidatedLabel != null) {
@@ -367,25 +369,27 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
  */
 function consolidateLabels(partialScanStore, rawResults, output) {
     // consolidate any partial labels in the partial store
-    var intermediatePartialLabel = null;
     if (partialScanStore[0] != "") {
-        // there are two partials in the store; consolidate them into a single compound partial
         if (partialScanStore[1] != "") {
-            intermediatePartialLabel = consolidatePartialLabels(partialScanStore[0], partialScanStore[1]);
+            // there are two partials in the store; consolidate them into a single compound partial
+            var compoundPartialLabel = consolidatePartialLabels(partialScanStore[0], partialScanStore[1]);
             // if the result of the consolidation is null, there was a serial number mismatch
-            if (intermediatePartialLabel == null) {
+            if (compoundPartialLabel == null) {
                 // throw a consolidation error and clear the partial store
-                output = consolidationError(output, "Consolidation failed because the Partial Labels are for different Baskets.");
+                output = consolidationError(output, "Failed to Consolidate: Partial Labels are for different Baskets.");
                 // return the modified output conditions
                 return [true, null, output];
+            // else the consolidation was successful; save the consolidated partial label to store[0]
+            } else {
+                partialScanStore[0] = compoundPartialLabel;
             }
         }
         // now there is only one partial in the store; consolidate the partial label with the full label
-        var consolidatedLabel = consolidateWithFullLabel(intermediatePartialLabel, rawResults);
+        var consolidatedLabel = consolidateWithFullLabel(partialScanStore[0], rawResults);
         // if the result of the consolidation is null, there was a serial number mismatch
         if (consolidatedLabel == null) {
             // throw a consolidation error and clear the partial store
-            output = consolidationError(output, "Consolidation failed because the Partial and Full Labels are for different Baskets.");
+            output = consolidationError(output, "Failed to Consolidate: Partial and Full Labels are for different Baskets.");
             // return the modified output conditions
             return [true, null, output];
         }
