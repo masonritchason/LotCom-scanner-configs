@@ -167,20 +167,22 @@ function isStringInArray(array, string) {
  **/
 function processResultString(raw) {
 	// ensure the input is a string
-	var input_string = String(raw);
+	var inputString = String(raw);
+    // replace the newline between part number/name with a bar "|"
+    inputString = inputString.replace(/\r?\n/g, "|");
     // split the string into an array by the bar symbol
-    var input_list = input_string.split("|");
+    var inputList = inputString.split("|");
     // remove whitespace, comma, ampersand, and newline characters from each field
-    for (var i = 0; i < input_list.length; i++) {
-        _string = input_list[i];
+    for (var i = 0; i < inputList.length; i++) {
+        _string = inputList[i];
         _string = _string.replace(/\s/g, "");
         _string = _string.replace(/\\000026/g, "");
         _string = _string.replace(/\n/g, "");
         _string = _string.replace(",", "")
-        input_list[i] = _string;
+        inputList[i] = _string;
     }
 	// return the processed result array
-	return input_list;
+	return inputList;
 }
 
 /**
