@@ -51,6 +51,8 @@ function onResult(decodeResults, readerProperties, output) {
                     previousScanStore = error[0];
                     output = error[1];
                 }
+                // full label scanned; check for and perform any consolidations
+                var consolidationResults = consolidateLabels(partialScanStore, rawResults, output, previousScanStore);
                 /**
                  * 
                  * 
@@ -79,70 +81,6 @@ function onResult(decodeResults, readerProperties, output) {
         output = error[1];
     }
 }
-
-
-/**
- * PARTIAL|4420-Diecast|00-T20-532AP-A000-YB1\nHOUSING, PIVOT*|200|20|1|3/3/2025-16:01:36|1|MBR 
- * 4420-Diecast|00-T20-532AP-A000-YB1\nHOUSING, PIVOT*|264|018|1|3/3/2025-15:45:50|1|MBR 
- * 
- * PARTIAL|1
- */
-
-/**
- * Consolidates two PARTIAL labels into a singular, paired PARTIAL label. 
- * Draws static (matching) field values from the second partial label.
- * @param {string} partialLabel1 the first (earlier) partial label to consolidate FROM.
- * @param {string} partialLabel2 the second (later) partial label to consolidate TO.
- * @returns {string | null} Consolidated Partial Label string; null if serial numbers do not match.
- */
-function consolidatePartialLabels(partialLabel1, partialLabel2) {
-    // confirm matching serial numbers
-    var matching = checkMatchingSerialNumbers(partialLabel1, partialLabel2);
-    if (!matching) {
-        return null;
-    }
-    // retrieve the quantity, shift, and operator information from each Split Label
-    var quantity1 = splitLabel1.splice(3, 1);
-    var quantity2 = splitLabel2.splice(3, 1);
-    var shift1 = splitLabel1.splice(splitLabel1.length - 3, 1);
-    var shift2 = splitLabel2.splice(splitLabel2.length - 3, 1);
-    var operator1 = splitLabel1.splice(splitLabel1.length - 1, 1);
-    var operator2 = splitLabel2.splice(splitLabel2.length - 1, 1);
-    // combine the two sets of info into formatted pairs
-    var quantityPair = quantity1 + ":" + quantity2;
-    var shiftPair = shift1 + ":" + shift2;
-    var operatorPair = operator1 + ":" + operator2;
-    // remove the PARTIAL flag from the list of fields
-    splitLabel2.splice(0, 1)
-    // create a new PARTIAL label string with the paired/existing label info
-    // add the first 5 mandatory fields (partial|process|part|quantity|serial number)
-    var partialLabelFront = "PARTIAL|" +                        // partial flag
-                            splitLabel2.splice(0, 1) + "|" +    // process title
-                            splitLabel2.splice(0, 1) + "|" +    // part number/name
-                            quantityPair + "|" +                // paired quantities 
-                            splitLabel2.splice(0, 1) + "|";     // serial number (jbk/lot)
-    // create the back-end of the partial label string (date|shift|operator)
-    // uses the second (more recent) partial label date
-    var partialLabelBack = splitLabel2.splice(splitLabel2.length - 1, 1) + "|" +
-                           shiftPair + "|" +
-                           operatorPair;
-    // create a mid-section to capture any process-dependent fields (whatever is remaining in the splitLabel2 string)
-    var partialLabelInner = ""
-    while (splitLabel2.length > 0) {
-        // add the field to the inner segment
-        partialLabelInner += splitLabel2.splice(0, 1) + "|";
-    }
-    // combine the front, inner, and back segments into a full partial label string
-    var consolidatedPartialLabel = partialLabelFront + partialLabelInner + partialLabelBack;
-    return consolidatedPartialLabel;
-}
-
-
-function consolidateWithFullLabel(partialLabel, fullLabel) {
-
-}
-
-
 
 
 /**
@@ -231,18 +169,38 @@ function generateOutputString(readerProperties, processedResultList) {
     return outputString;
 }
 
+
+/**
+ * Consolidation Methods
+ */
+
+
 /**
  * Compares the serial numbers of two Partial Labels.
  * @param {string} partialLabel1 the first (earlier) partial label to consolidate FROM.
  * @param {string} partialLabel2 the second (later) partial label to consolidate TO.
- * @returns `true` on match; `false` on mismatch.
+ * @returns {boolean} `true` on match; `false` on mismatch.
  */
-function checkMatchingSerialNumbers(partialLabel1, partialLabel2) {
+function checkPartialSerialNumbers(partialLabel1, partialLabel2) {
     // split the labels by the bar symbol delimiter
     var splitLabel1 = partialLabel1.split("|");
     var splitLabel2 = partialLabel2.split("|");
     // verify that the two Labels have a matching serial number in position 4 (5th field)
     return (splitLabel1[4] == splitLabel2[4]);
+}
+
+/**
+ * Compares the serial numbers of a Partial Label and Full Label.
+ * @param {string} partialLabel 
+ * @param {string} fullLabel 
+ * @returns {boolean} `true` on match; `false` on mismatch.
+ */
+function checkFullSerialNumbers(partialLabel, fullLabel) {
+    // split the labels by the bar symbol delimiter
+    var splitPartialLabel = partialLabel.split("|");
+    var splitFullLabel = fullLabel.split("|");
+    // verify that the two Labels have a matching serial number (position 4 for Partial, position 3 for Full)
+    return (splitPartialLabel[4] == splitFullLabel[3]);
 }
 
 /**
@@ -274,7 +232,7 @@ function checkAndProcessPartialLabel(processedResults, partialScanStore, decodeR
                 output = duplicateScanError(output);
             // the new scan is not a duplicate; verify matching serial numbers
             } else {
-                var matching = checkMatchingSerialNumbers(partialScanStore[0], rawResults);
+                var matching = checkPartialSerialNumbers(partialScanStore[0], rawResults);
                 // the serial numbers match; store this second scan
                 if (matching) {
                     partialScanStore[1] = rawResults;
@@ -298,6 +256,166 @@ function checkAndProcessPartialLabel(processedResults, partialScanStore, decodeR
     }
     return [isPartial, previousScanStore, output];
 }
+
+/**
+ * Consolidates two PARTIAL labels into a singular, paired PARTIAL label. 
+ * Draws static (matching) field values from the second partial label.
+ * @param {string} partialLabel1 the first (earlier) partial label to consolidate FROM.
+ * @param {string} partialLabel2 the second (later) partial label to consolidate TO.
+ * @returns {string | null} Consolidated Partial Label string; null if serial numbers do not match.
+ */
+function consolidatePartialLabels(partialLabel1, partialLabel2) {
+    // confirm matching serial numbers
+    if (!checkPartialSerialNumbers(partialLabel1, partialLabel2)) {
+        return null;
+    }
+    // split the label strings by the Bar Symbol
+    var splitLabel1 = partialLabel1.split("|");
+    var splitLabel2 = partialLabel2.split("|");
+    // retrieve the quantity, shift, and operator information from each Split Label
+    var quantity1 = splitLabel1.splice(3, 1);
+    var quantity2 = splitLabel2.splice(3, 1);
+    var shift1 = splitLabel1.splice(splitLabel1.length - 3, 1);
+    var shift2 = splitLabel2.splice(splitLabel2.length - 3, 1);
+    var operator1 = splitLabel1.splice(splitLabel1.length - 1, 1);
+    var operator2 = splitLabel2.splice(splitLabel2.length - 1, 1);
+    // combine the two sets of info into formatted pairs
+    var quantityPair = quantity1 + ":" + quantity2;
+    var shiftPair = shift1 + ":" + shift2;
+    var operatorPair = operator1 + ":" + operator2;
+    // remove the PARTIAL flag from the list of fields
+    splitLabel2.splice(0, 1)
+    // create a new PARTIAL label string with the paired/existing label info
+    // add the first 5 mandatory fields (partial|process|part|quantity|serial number)
+    var partialLabelFront = "PARTIAL|" +                        // partial flag
+                            splitLabel2.splice(0, 1) + "|" +    // process title
+                            splitLabel2.splice(0, 1) + "|" +    // part number/name
+                            quantityPair + "|" +                // paired quantities 
+                            splitLabel2.splice(0, 1) + "|";     // serial number (jbk/lot)
+    // create the back-end of the partial label string (date|shift|operator)
+    // uses the second (more recent) partial label date
+    var partialLabelBack = splitLabel2.splice(splitLabel2.length - 1, 1) + "|" +
+                           shiftPair + "|" +
+                           operatorPair;
+    // create a mid-section to capture any process-dependent fields (whatever is remaining in the splitLabel2 string)
+    var partialLabelInner = ""
+    while (splitLabel2.length > 0) {
+        // add the field to the inner segment
+        partialLabelInner += splitLabel2.splice(0, 1) + "|";
+    }
+    // combine the front, inner, and back segments into a full partial label string
+    var consolidatedPartialLabel = partialLabelFront + partialLabelInner + partialLabelBack;
+    return consolidatedPartialLabel;
+}
+
+/**
+ * Consolidates a PARTIAL label into a FULL label. 
+ * Draws static (matching) field values from the FULL label.
+ * @param {*} partialLabel the partial label to consolidate FROM.
+ * @param {*} fullLabel the full label to consolidate TO.
+ * @returns {string | null} Consolidated Full Label string; null if serial numbers do not match.
+ */
+function consolidateWithFullLabel(partialLabel, fullLabel) {
+    // confirm matching serial numbers
+    if (!checkFullSerialNumbers(partialLabel, fullLabel)) {
+        return null;
+    }
+    // split the label strings by the Bar Symbol
+    var splitPartial = partialLabel.split("|");
+    var splitFull = fullLabel.split("|");
+    // retrieve the quantity, shift, and operator information from each Split Label
+    var quantityPartial = splitPartial.splice(3, 1);
+    var quantityFull = splitFull.splice(2, 1);
+    var shiftPartial = splitPartial.splice(splitPartial.length - 3, 1);
+    var shiftFull = splitFull.splice(splitFull.length - 3, 1);
+    var operatorPartial = splitPartial.splice(splitPartial.length - 1, 1);
+    var operatorFull = splitFull.splice(splitFull.length - 1, 1);
+    // combine the two sets of info into formatted pairs
+    var quantityPair = quantityPartial + ":" + quantityFull;
+    var shiftPair = shiftPartial + ":" + shiftFull;
+    var operatorPair = operatorPartial + ":" + operatorFull;
+    // remove the PARTIAL flag from the Partial Label's list of fields
+    splitPartial.splice(0, 1)
+    // create a new FULL Label string with the paired/existing label info
+    // add the first 4 mandatory fields (process|part|quantity|serial number)
+    var fullLabelFront = splitFull.splice(0, 1) + "|" +  // process title
+                         splitFull.splice(0, 1) + "|" +  // part number/name
+                         quantityPair + "|" +            // paired quantities 
+                         splitFull.splice(0, 1) + "|";   // serial number (jbk/lot)
+    // create the back-end of the Full Label string (date|shift|operator)
+    // uses the Full Label date
+    var fullLabelBack = splitFull.splice(splitFull.length - 1, 1) + "|" +
+                        shiftPair + "|" +
+                        operatorPair;
+    // create a mid-section to capture any process-dependent fields (whatever is remaining in the splitFull string)
+    var fullLabelInner = ""
+    while (splitFull.length > 0) {
+        // add the field to the inner segment
+        fullLabelInner += splitFull.splice(0, 1) + "|";
+    }
+    // combine the front, inner, and back segments into a Full label string
+    var consolidatedLabel = fullLabelFront + fullLabelInner + fullLabelBack;
+    return consolidatedLabel;
+}
+
+/**
+ * Checks for one or two Partial Labels in `partialScanStore`.
+ * If two, consolidates them into a single Partial Label.
+ * Consolidates either the single or compound Partial Label with the passed Full Label (`rawResults`).
+ * @param {*} partialScanStore The `partialScanStore` array.
+ * @param {*} rawResults The raw decoded scan result produced by the Scanner.
+ * @param {*} output The output module produced by the Scanner.
+ * @param {*} previousScanStore The `previousScanStore` array.
+ * @returns a modified scanner condition array `[null, previousScanStore, partialScanStore, output]`; 
+ * includes the consolidated Full Label in position `0` if successful `[consolidationResult, previousScanStore, partialScanStore, output]`.
+ */
+function consolidateLabels(partialScanStore, rawResults, output, previousScanStore) {
+    // consolidate any partial labels in the partial store
+    var consolidationResult = null;
+    if (partialScanStore[0] != "") {
+        // there are two partials in the store; consolidate them into a single compound partial
+        if (partialScanStore[1] != "") {
+            consolidationResult = consolidatePartialLabels(partialScanStore[0], partialScanStore[1]);
+            // if the result of the consolidation is null, there was a serial number mismatch
+            if (consolidationResult == null) {
+                // throw a consolidation error and clear the partial store
+                var error = consolidationError(rawResults, output, previousScanStore, "Consolidation failed because the Partial Labels are for different Baskets.");
+                previousScanStore = error[0];
+                output = error[1];
+                partialScanStore = ["", ""];
+                // return the modified output conditions
+                return [null, previousScanStore, partialScanStore, output];
+            // the partial labels were consolidated successfully
+            } else {
+                partialScanStore[0] = consolidationResult;
+                partialScanStore[1] = "";
+            }
+        }
+        // now there is only one partial in the store; consolidate it with the full
+        consolidationResult = consolidateWithFullLabel(partialScanStore[0], rawResults);
+        // if the result of the consolidation is null, there was a serial number mismatch
+        if (consolidationResult == null) {
+            // throw a consolidation error and clear the partial store
+            var error = consolidationError(rawResults, output, previousScanStore, "Consolidation failed because the Partial and Full Labels are for different Baskets.");
+            previousScanStore = error[0];
+            output = error[1];
+            partialScanStore = ["", ""];
+            // return the modified output conditions
+            return [null, previousScanStore, partialScanStore, output];
+        // the partial and full labels were consolidated successfully
+        } else {
+            partialScanStore = ["", ""];
+        }
+    }
+    // return the consolidation result and the modified scanner conditions
+    return [consolidationResult, partialScanStore, output, previousScanStore];
+}
+
+
+/**
+ * Error Methods
+ */
+
 
 /**
  * Throws a duplicate scan error to the Scanner. 
