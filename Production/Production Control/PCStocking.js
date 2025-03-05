@@ -59,10 +59,25 @@ function onResult(decodeResults, readerProperties, output) {
     // }
 
     // validate that the first field is a part number
+    if (!validatePartNumber(processedResults[0])) {
+        // not a Part Number; throw an error
+        output = dataValidationError(output, "Invalid Supplier Box Label or Part Number");
+        return;
+    }
 
     // validate that the third field is a quantity
+    if (!validateQuantity(processedResults[2])) {
+        // not a Quantity; throw an error
+        output = dataValidationError(output, "Invalid Supplier Box Label or Quantity");
+        return;
+    }
 
     // validate that the fourth field is a Lot #
+    if (!validateLotNumber(processedResults[3])) {
+        // not a Lot #; throw an error
+        output = dataValidationError(output, "Invalid Supplier Box Label or Lot Number");
+        return;
+    }
     
     // all checks, consolidations, and validations were passed
     // generate a final output string, send it to the output module, and show a message on the screen
