@@ -271,8 +271,8 @@ function consolidatePartialLabels(partialLabel1, partialLabel2) {
     // retrieve the quantity, shift, and operator information from each Split Label
     var quantity1 = splitLabel1.splice(3, 1);
     var quantity2 = splitLabel2.splice(3, 1);
-    var shift1 = splitLabel1.splice(splitLabel1.length - 3, 1);
-    var shift2 = splitLabel2.splice(splitLabel2.length - 3, 1);
+    var shift1 = splitLabel1.splice(splitLabel1.length - 2, 1);
+    var shift2 = splitLabel2.splice(splitLabel2.length - 2, 1);
     var operator1 = splitLabel1.splice(splitLabel1.length - 1, 1);
     var operator2 = splitLabel2.splice(splitLabel2.length - 1, 1);
     // combine the two sets of info into formatted pairs
@@ -322,8 +322,8 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
     // retrieve the quantity, shift, and operator information from each Split Label
     var quantityPartial = splitPartial.splice(3, 1);
     var quantityFull = splitFull.splice(2, 1);
-    var shiftPartial = splitPartial.splice(splitPartial.length - 3, 1);
-    var shiftFull = splitFull.splice(splitFull.length - 3, 1);
+    var shiftPartial = splitPartial.splice(splitPartial.length - 2, 1);
+    var shiftFull = splitFull.splice(splitFull.length - 2, 1);
     var operatorPartial = splitPartial.splice(splitPartial.length - 1, 1);
     var operatorFull = splitFull.splice(splitFull.length - 1, 1);
     // combine the two sets of info into formatted pairs
