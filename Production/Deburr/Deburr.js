@@ -156,6 +156,10 @@ function generateOutputString(readerProperties, processedResultList) {
     formattedDate += "-" + unformattedDate[3]
     // add the Scan date/time to the output
     var outputString = formattedDate;
+    // add the IP address of the scanner to the output
+    // REPLACE ME -- BUT DON'T COMMIT TO GITHUB!
+    // CONFIGURE THIS ON THE INDIVIDUAL SCANNER
+    outputString += "," + "<ip>";
     // add the processed Scan results to the output
     for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);
