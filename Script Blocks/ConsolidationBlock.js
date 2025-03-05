@@ -53,6 +53,28 @@ function onResult(decodeResults, readerProperties, output) {
                 }
                 // full label scanned; check for and perform any consolidations
                 var consolidationResults = consolidateLabels(partialScanStore, rawResults, output, previousScanStore);
+                // a consolidation was required
+                if (consolidationResults[0]) {
+                    // if the consolidation result was returned, it was successful
+                    if (consolidationResults[1] != null) {
+                        // set the output content, the OLED Message, and save the modified stores
+                        output.content = consolidationResults[1];
+                        previousScanStore = consolidationResults[2];
+                        output.OLED = "Consolidation: " + consolidationResults[1];
+                    // if not, the consolidation failed
+                    } else {
+                        // set the output content to the error output and save the modified stores
+                        previousScanStore = consolidationResults[2];
+                        output = consolidationResults[3];
+                    }
+                    // clear the partial scan store
+                    partialScanStore = ["", ""];
+                // no consolidation was required
+                } else {
+                    // restore the output content and save the modified stores
+                    previousScanStore = consolidationResults[2];
+                    output = consolidationResults[3];
+                }
                 /**
                  * 
                  * 
@@ -66,9 +88,9 @@ function onResult(decodeResults, readerProperties, output) {
                  * 
                  */
                 // generate a final output string, send it to the output module, and show a message on the screen
-                var finalOutput = generateOutputString(readerProperties, processedResults);
-                output.content = finalOutput;
-                output.OLED = "<Message>";
+                // var finalOutput = generateOutputString(readerProperties, processedResults);
+                // output.content = finalOutput;
+                // output.OLED = "<Message>";
             }
         // the code scanned matches the previously scanned code
         } else {
@@ -366,49 +388,46 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
  * @param {*} rawResults The raw decoded scan result produced by the Scanner.
  * @param {*} output The output module produced by the Scanner.
  * @param {*} previousScanStore The `previousScanStore` array.
- * @returns a modified scanner condition array `[null, previousScanStore, partialScanStore, output]`; 
- * includes the consolidated Full Label in position `0` if successful `[consolidationResult, previousScanStore, partialScanStore, output]`.
+ * @returns > `[true, consolidationResult, previousScanStore, output]` if a consolidation was required and was made successfully;
+ *          
+ *          > `[false, null, previousScanStore, output]` if no consolidation was needed;
+ *          
+ *          > `[true, null, previousScanStore, output]` if a consolidation was required but it failed due to mismatching serial numbers.
  */
 function consolidateLabels(partialScanStore, rawResults, output, previousScanStore) {
     // consolidate any partial labels in the partial store
-    var consolidationResult = null;
+    var intermediatePartialLabel = null;
     if (partialScanStore[0] != "") {
         // there are two partials in the store; consolidate them into a single compound partial
         if (partialScanStore[1] != "") {
-            consolidationResult = consolidatePartialLabels(partialScanStore[0], partialScanStore[1]);
+            intermediatePartialLabel = consolidatePartialLabels(partialScanStore[0], partialScanStore[1]);
             // if the result of the consolidation is null, there was a serial number mismatch
-            if (consolidationResult == null) {
+            if (intermediatePartialLabel == null) {
                 // throw a consolidation error and clear the partial store
                 var error = consolidationError(rawResults, output, previousScanStore, "Consolidation failed because the Partial Labels are for different Baskets.");
                 previousScanStore = error[0];
                 output = error[1];
-                partialScanStore = ["", ""];
                 // return the modified output conditions
-                return [null, previousScanStore, partialScanStore, output];
-            // the partial labels were consolidated successfully
-            } else {
-                partialScanStore[0] = consolidationResult;
-                partialScanStore[1] = "";
+                return [true, null, previousScanStore, output];
             }
         }
-        // now there is only one partial in the store; consolidate it with the full
-        consolidationResult = consolidateWithFullLabel(partialScanStore[0], rawResults);
+        // now there is only one partial in the store; consolidate the partial label with the full label
+        var consolidatedLabel = consolidateWithFullLabel(intermediatePartialLabel, rawResults);
         // if the result of the consolidation is null, there was a serial number mismatch
-        if (consolidationResult == null) {
+        if (consolidatedLabel == null) {
             // throw a consolidation error and clear the partial store
             var error = consolidationError(rawResults, output, previousScanStore, "Consolidation failed because the Partial and Full Labels are for different Baskets.");
             previousScanStore = error[0];
             output = error[1];
-            partialScanStore = ["", ""];
             // return the modified output conditions
-            return [null, previousScanStore, partialScanStore, output];
-        // the partial and full labels were consolidated successfully
-        } else {
-            partialScanStore = ["", ""];
+            return [true, null, previousScanStore, output];
         }
+        // the partial and full labels were consolidated successfully
+        return [true, consolidatedLabel, previousScanStore, output];   
+    // there were no partial labels to consolidate
+    } else {
+        return [false, null, output, previousScanStore]
     }
-    // return the consolidation result and the modified scanner conditions
-    return [consolidationResult, partialScanStore, output, previousScanStore];
 }
 
 
