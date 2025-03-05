@@ -276,9 +276,9 @@ function consolidatePartialLabels(partialLabel1, partialLabel2) {
     var operator1 = splitLabel1.splice(splitLabel1.length - 1, 1);
     var operator2 = splitLabel2.splice(splitLabel2.length - 1, 1);
     // combine the two sets of info into formatted pairs
-    var quantityPair = quantity1 + ":" + quantity2;
-    var shiftPair = shift1 + ":" + shift2;
-    var operatorPair = operator1 + ":" + operator2;
+    var quantityPair = quantity1 + "&" + quantity2;
+    var shiftPair = shift1 + "&" + shift2;
+    var operatorPair = operator1 + "&" + operator2;
     // remove the PARTIAL flag from the list of fields
     splitLabel2.splice(0, 1)
     // create a new PARTIAL label string with the paired/existing label info
@@ -327,9 +327,9 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
     var operatorPartial = splitPartial.splice(splitPartial.length - 1, 1);
     var operatorFull = splitFull.splice(splitFull.length - 1, 1);
     // combine the two sets of info into formatted pairs
-    var quantityPair = quantityPartial + ":" + quantityFull;
-    var shiftPair = shiftPartial + ":" + shiftFull;
-    var operatorPair = operatorPartial + ":" + operatorFull;
+    var quantityPair = quantityPartial + "&" + quantityFull;
+    var shiftPair = shiftPartial + "&" + shiftFull;
+    var operatorPair = operatorPartial + "&" + operatorFull;
     // remove the PARTIAL flag from the Partial Label's list of fields
     splitPartial.splice(0, 1)
     // create a new FULL Label string with the paired/existing label info
