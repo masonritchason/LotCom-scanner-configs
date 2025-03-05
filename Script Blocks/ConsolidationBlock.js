@@ -5,7 +5,11 @@
  * 
  * Boilerplate code for all Scanner Configurations.
  * 
- * Consolidation Block included.
+ * Consolidation Logic included.
+ * 
+ * Data Field Format Validation included.
+ * 
+ * To modify for a specific process, Ctrl+F for "REPLACE ME" and make changes as needed.
  */
 
 
@@ -59,7 +63,7 @@ function onResult(decodeResults, readerProperties, output) {
             // confirm the serial numbers match
             if (!checkPartialSerialNumbers(partialScanStore[0], rawResults)) {
                 // serial numbers don't match; throw an error
-                output = consolidationError(output, "This Partial Label is for a different Basket. Please consolidate to a Full Label before scanning another Partial Label.");
+                output = consolidationError(output, "Failed to Consolidate: This Partial Label is for a different Basket.");
                 return;
             }
             // add the partial label to the second store slot
@@ -81,9 +85,10 @@ function onResult(decodeResults, readerProperties, output) {
 
     // not a partial label scan
     // verify correct previous process (1st field on QR Code)
-    /** Enter previous process here */
-    var previousProcess = "4420 - Diecast";
+    // REPLACE ME
+    var previousProcess = "<previousProcessTitle>";
     if (!processedResults[0] == previousProcess) {
+        // REPLACE ME
         output = dataValidationError(output, "Invalid Label. Please scan a <previousProcess> Label.");
         return;
     }
@@ -112,6 +117,7 @@ function onResult(decodeResults, readerProperties, output) {
         processedResults = processResultString(consolidatedLabel);
     }
 
+    // REPLACE ME
     /**
      * 
      * 
@@ -129,6 +135,7 @@ function onResult(decodeResults, readerProperties, output) {
     // generate a final output string, send it to the output module, and show a message on the screen
     var finalOutput = generateOutputString(readerProperties, processedResults);
     output.content = finalOutput;
+    // REPLACE ME
     output.OLED = "<Message>";
 }
 
@@ -398,6 +405,164 @@ function consolidateLabels(partialScanStore, rawResults, output) {
     // there were no partial labels to consolidate
     } else {
         return [false, null, output]
+    }
+}
+
+
+/**
+ * Format Validator Methods.
+ * 
+ * Call each to validate the needed fields for each Label type.
+ * 
+ * Remove unused methods to avoid loading useless script onto the Scanner.
+ * REPLACE ME
+ */
+
+
+/**
+ * Validates a string as a PO Number using a regular expression test.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validatePONumber(string) {
+	// set a regex pattern for PO Number format (0-9A-Za-z-_) and check it
+	var poPattern = /^[\w\-]+$/;
+	if (poPattern.test(string)) {
+		return true;	
+	} else {
+		return false;	
+	}	
+}
+
+/**
+ * Validates a string as a Part Number using a regular expression test.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validatePartNumber(string) {
+	// set regex pattern for Part Numbers
+	var pnPattern1 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
+	var pnPattern2 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
+	var pnPattern3 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
+	// check for each of the defined part number formats
+	if (pnPattern1.test(string)) {
+		return true;	
+	}
+	if (pnPattern2.test(string)) {
+		return true;	
+	}
+	if (pnPattern3.test(string)) {
+		return true;	
+	}
+	// none of the checks were successful
+	return false;
+}
+
+/**
+ * Validates a string as a Date (without a timestamp) using a regular expression test.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateDateNoTime(string) {
+    // set a regex pattern for Date format
+    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d$/;
+	if (datePattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
+
+/**
+ * Validates a string as a Shift Number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateShiftNumber(string) {
+    // check that the string is 1, 2, or 3
+    if (string == "1" || string == "2" || string == "3") {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Validates a string as a JBK Number. Enforces three-length format; returns the string in this format.
+ * @param {string} string 
+ * @returns {boolean | Array}
+ */
+function validateJBKNumber(string) {
+    // set a regex pattern for JBK numbers
+    var jbkPattern = /^[\d]?[\d]?[\d]$/;
+    if (jbkPattern.test(string)) {
+        // ensure JBK is three digits by adding 0s
+        while (string.length < 3) {
+            string = "0" + string;
+        }
+		return [true, string];	
+	} else {
+        return false;
+    }
+}
+
+/**
+ * Validates a string as a Lot Number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateLotNumber(string) {
+    // set a regex pattern for Lot numbers
+    var lotPattern = /^[\w]+$/;
+    if (lotPattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
+
+/**
+ * Validates a string as a Model number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateModel(string) {
+    // set a regex pattern for Model numbers
+    var modelPattern = /^\w\w\w$/;
+    if (modelPattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
+
+/**
+ * Validates a string as a Quantity.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateQuantity(string) {
+    // set a regex pattern for Quantities
+    var quantityPattern = /^\d+$/;
+    if (quantityPattern.test(string)) {
+		return true;	
+	} else {
+        return false;
+    }
+}
+
+/**
+ * Validates a string as a Die Number.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function validateDieNumber(string) {
+    // set a regex pattern for Die Numbers
+    var diePattern = /^\d?\d?\d$/;
+    if (diePattern.test(string)) {
+		return true;	
+	} else {
+        return false;
     }
 }
 
