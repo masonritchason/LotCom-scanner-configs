@@ -11,8 +11,6 @@
 
 // holds the previous scan result
 var previousScanStore = [""];
-// used to hold comparison of previous and current scan result
-var inLastRead = true;
 // used to hold 1 or 2 partial label scan results for consolidation
 var partialScanStore = ["", ""]
 
@@ -24,84 +22,112 @@ var partialScanStore = ["", ""]
  * @param output - Array allowing customization of the output behavior of the Scanner.
  **/ 
 function onResult(decodeResults, readerProperties, output) {
-	// if the result was successfully decoded
-	if (decodeResults[0].decoded) {
-        // save the raw results
-        var rawResults = decodeResults[0].content;
-        // check the code output against the previously scanned code(s)
-        inLastRead = isStringInArray(previousScanStore, rawResults);
-        if (!inLastRead) {
-            // shift out the previous scan and add the new scan into the list
-            previousScanStore.shift();
-            previousScanStore.push(rawResults);
-            // process the initial results
-            var processedResults = processResultString(rawResults);
-            // perform partial checks
-            var checkResults = checkAndProcessPartialLabel(processedResults, partialScanStore, decodeResults, output, previousScanStore);
-            // if the label was partial, use the output module from the method
-            if (checkResults[0]) {
-                previousScanStore = checkResults[1];
-                output = checkResults[2];
-            } else {
-                // verify correct previous process (1st field on QR Code)
-                /** Enter previous process here */
-                var previousProcess = "4420 - Diecast";
-                if (!processedResults[0] == previousProcess) {
-                    var error = dataValidationError(decodeResults, output, previousScanStore, "Invalid Label. Please scan a <previousProcess> Label.");
-                    previousScanStore = error[0];
-                    output = error[1];
-                }
-                // full label scanned; check for and perform any consolidations
-                var consolidationResults = consolidateLabels(partialScanStore, rawResults, output, previousScanStore);
-                // a consolidation was required
-                if (consolidationResults[0]) {
-                    // if the consolidation result was returned, it was successful
-                    if (consolidationResults[1] != null) {
-                        // set the output content, the OLED Message, and save the modified stores
-                        output.content = consolidationResults[1];
-                        previousScanStore = consolidationResults[2];
-                        output.OLED = "Consolidation: " + consolidationResults[1];
-                    // if not, the consolidation failed
-                    } else {
-                        // set the output content to the error output and save the modified stores
-                        previousScanStore = consolidationResults[2];
-                        output = consolidationResults[3];
-                    }
-                    // clear the partial scan store
-                    partialScanStore = ["", ""];
-                // no consolidation was required
-                } else {
-                    // restore the output content and save the modified stores
-                    previousScanStore = consolidationResults[2];
-                    output = consolidationResults[3];
-                }
-                /**
-                 * 
-                 * 
-                 * 
-                 * 
-                 * Add additional scan result validation conditions here.
-                 * Call the dataValidationError() method if any condition fails.
-                 * 
-                 * 
-                 * 
-                 * 
-                 */
-                // generate a final output string, send it to the output module, and show a message on the screen
-                // var finalOutput = generateOutputString(readerProperties, processedResults);
-                // output.content = finalOutput;
-                // output.OLED = "<Message>";
-            }
-        // the code scanned matches the previously scanned code
-        } else {
-            output = duplicateScanError(output);
-        }
-    // results do not pass the validations
-    } else {
-        var error = dataValidationError(decodeResults, output, previousScanStore);
-        previousScanStore = error[0];
-        output = error[1];
+	// if the result was not successfully decoded, escape immediately
+	if (!decodeResults[0].decoded) {
+        dmccCommand("OUTPUT.NOREAD");
+        return;
     }
+        
+    // results decoded successfully
+    // save the raw results
+    var rawResults = decodeResults[0].content;
+
+    // check the code output against the previously scanned code(s)
+    if (isStringInArray(previousScanStore, rawResults)) {
+        // duplicate scan; throw an error
+        output = duplicateScanError(output);
+        return;
+    }
+    
+    // not a duplicate scan
+    // shift out the previous scan and add the new scan into the list
+    previousScanStore.shift();
+    previousScanStore.push(rawResults);
+
+    // process the initial results
+    var processedResults = processResultString(rawResults);
+
+    // perform partial label scan checks
+    if (processedResults[0] == "PARTIAL") {
+        var storeSlot = null;
+        var messageText = "";
+        if (partialScanStore[0] == "") {
+            // add the partial label to the first store slot
+            storeSlot = 0;
+            messageText = "First";
+        } else if (partialScanStore[1] == "") {
+            // confirm the serial numbers match
+            if (!checkPartialSerialNumbers(partialScanStore[0], rawResults)) {
+                // serial numbers don't match; throw an error
+                output = consolidationError(output, "This Partial Label is for a different Basket. Please consolidate to a Full Label before scanning another Partial Label.");
+                return;
+            }
+            // add the partial label to the second store slot
+            storeSlot = 1;
+            messageText = "Second";
+        }
+        // was a store slot available?
+        if (storeSlot == null) {
+            // no store slot available; throw an error
+            output = consolidationError(output, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
+        } else {
+            // add the scan to the store, send a message, and exit the script
+            partialScanStore[storeSlot] = rawResults;
+            output.OLED = messageText + " Partial Label stored for Consolidation.";
+            output.content = "";
+            return;
+        }
+    }
+
+    // not a partial label scan
+    // verify correct previous process (1st field on QR Code)
+    /** Enter previous process here */
+    var previousProcess = "4420 - Diecast";
+    if (!processedResults[0] == previousProcess) {
+        output = dataValidationError(output, "Invalid Label. Please scan a <previousProcess> Label.");
+        return;
+    }
+
+    // check for and perform any needed consolidations
+    var consolidationResults = consolidateLabels(partialScanStore, rawResults, output);
+    // confirm that the consolidation was either not required or successful
+    if (consolidationResults[0] && consolidationResults[1] == null) {
+        // consolidation was required and failed; throw the error from the consolidationResults
+        output = consolidationResults[2];
+        return;
+    }
+    // either a consolidation was required and succeeded or no consolidation was required
+    var consolidatedLabel = null;
+    if (consolidationResults[0]) {
+        // consolidation was required and succeeded; set the output content and the OLED Message
+        consolidatedLabel = consolidationResults[1];
+    }
+    // save the modified output module (this is all that needs to happen if no consolidation was made)
+    output = consolidationResults[2];
+
+    // update the processed result to a processed version of the consolidated label (only if a consolidation occurred)
+    if (consolidatedLabel != null) {
+        processedResults = processResultString(consolidatedLabel);
+    }
+
+    /**
+     * 
+     * 
+     * 
+     * 
+     * Add additional scan result validation conditions here.
+     * Call the dataValidationError() method if any condition fails.
+     * 
+     * 
+     * 
+     * 
+     */
+    
+    // all checks, consolidations, and validations were passed
+    // generate a final output string, send it to the output module, and show a message on the screen
+    var finalOutput = generateOutputString(readerProperties, processedResults);
+    output.content = finalOutput;
+    output.OLED = "<Message>";
 }
 
 
@@ -226,60 +252,6 @@ function checkFullSerialNumbers(partialLabel, fullLabel) {
 }
 
 /**
- * Checks if a scan result is a Partial Label and processes it if so.
- * @param {string[]} processedResults a processed scan result from `processResultString()`.
- * @param {string[]} partialScanStore the `partialScanStore` array.
- * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
- * @param {*} output - The `output` module created by the Scanner.
- * @param {*} previousScanStore - The `previousScanStore` array initialized in the beginning of the script.
- * @returns {[boolean, *, *]} `boolean` (is Partial?), `previousScanStore` array, and modified `output` module.
- */
-function checkAndProcessPartialLabel(processedResults, partialScanStore, decodeResults, output, previousScanStore) {
-    // check if the results are from a Partial Label
-    var rawResults = decodeResults[0].content;
-    var isPartial = false;
-    if (processedResults[0] == "PARTIAL") {
-        isPartial = true;
-        // add the RAW scan result to the partial scans store
-        if (partialScanStore[0] == "") {
-            partialScanStore[0] = rawResults;
-            // send first partial message
-            output.OLED = "First Partial Label stored for Consolidation.";
-            // output nothing
-            output.content = "";
-        // there is already at least one partial label scan stored
-        } else if (partialScanStore[1] == "") {
-            // if the first and second scans match, throw duplicate scan error
-            if (partialScanStore[0] == rawResults) {
-                output = duplicateScanError(output);
-            // the new scan is not a duplicate; verify matching serial numbers
-            } else {
-                var matching = checkPartialSerialNumbers(partialScanStore[0], rawResults);
-                // the serial numbers match; store this second scan
-                if (matching) {
-                    partialScanStore[1] = rawResults;
-                    // send second partial message
-                    output.OLED = "Second Partial Label stored for Consolidation.";
-                    // output nothing
-                    output.content = "";
-                // the partial label serial numbers do not match; throw consolidation error
-                } else {
-                    var error = consolidationError(decodeResults, output, previousScanStore, "This Partial Label is for a different Basket. Please consolidate to a Full Label before scanning another Partial Label.");
-                    previousScanStore = error[0];
-                    output = error[1];
-                }
-            }
-        // the partial label scans store is full (2 labels already scanned); cannot consolidate more partials
-        } else {
-            var error = consolidationError(decodeResults, output, previousScanStore, "Two Partial Labels have already been scanned. Please consolidate to a Full Label.");
-            previousScanStore = error[0];
-            output = error[1];
-        }
-    }
-    return [isPartial, previousScanStore, output];
-}
-
-/**
  * Consolidates two PARTIAL labels into a singular, paired PARTIAL label. 
  * Draws static (matching) field values from the second partial label.
  * @param {string} partialLabel1 the first (earlier) partial label to consolidate FROM.
@@ -387,14 +359,13 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
  * @param {*} partialScanStore The `partialScanStore` array.
  * @param {*} rawResults The raw decoded scan result produced by the Scanner.
  * @param {*} output The output module produced by the Scanner.
- * @param {*} previousScanStore The `previousScanStore` array.
- * @returns > `[true, consolidationResult, previousScanStore, output]` if a consolidation was required and was made successfully;
- *          
- *          > `[false, null, previousScanStore, output]` if no consolidation was needed;
- *          
- *          > `[true, null, previousScanStore, output]` if a consolidation was required but it failed due to mismatching serial numbers.
+ * @returns > `[true, consolidationResult, output]` if a consolidation was required and was made successfully;
+ * 
+ *          > `[false, null, output]` if no consolidation was needed;
+ * 
+ *          > `[true, null, output]` if a consolidation was required but it failed due to mismatching serial numbers.
  */
-function consolidateLabels(partialScanStore, rawResults, output, previousScanStore) {
+function consolidateLabels(partialScanStore, rawResults, output) {
     // consolidate any partial labels in the partial store
     var intermediatePartialLabel = null;
     if (partialScanStore[0] != "") {
@@ -404,11 +375,9 @@ function consolidateLabels(partialScanStore, rawResults, output, previousScanSto
             // if the result of the consolidation is null, there was a serial number mismatch
             if (intermediatePartialLabel == null) {
                 // throw a consolidation error and clear the partial store
-                var error = consolidationError(rawResults, output, previousScanStore, "Consolidation failed because the Partial Labels are for different Baskets.");
-                previousScanStore = error[0];
-                output = error[1];
+                output = consolidationError(output, "Consolidation failed because the Partial Labels are for different Baskets.");
                 // return the modified output conditions
-                return [true, null, previousScanStore, output];
+                return [true, null, output];
             }
         }
         // now there is only one partial in the store; consolidate the partial label with the full label
@@ -416,17 +385,15 @@ function consolidateLabels(partialScanStore, rawResults, output, previousScanSto
         // if the result of the consolidation is null, there was a serial number mismatch
         if (consolidatedLabel == null) {
             // throw a consolidation error and clear the partial store
-            var error = consolidationError(rawResults, output, previousScanStore, "Consolidation failed because the Partial and Full Labels are for different Baskets.");
-            previousScanStore = error[0];
-            output = error[1];
+            output = consolidationError(output, "Consolidation failed because the Partial and Full Labels are for different Baskets.");
             // return the modified output conditions
-            return [true, null, previousScanStore, output];
+            return [true, null, output];
         }
         // the partial and full labels were consolidated successfully
-        return [true, consolidatedLabel, previousScanStore, output];   
+        return [true, consolidatedLabel, output];   
     // there were no partial labels to consolidate
     } else {
-        return [false, null, output, previousScanStore]
+        return [false, null, output]
     }
 }
 
@@ -440,7 +407,7 @@ function consolidateLabels(partialScanStore, rawResults, output, previousScanSto
  * Throws a duplicate scan error to the Scanner. 
  * Sends a data validation failure command, sends a warning to the screen, and voids output.
  * @param {Array} output - The output module generated by the Scanner.
- * @returns {*} a modified output module to call from.
+ * @returns {*} a modified `output` module.
  */
 function duplicateScanError(output) {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
@@ -452,41 +419,27 @@ function duplicateScanError(output) {
 /**
  * Throws a data validation error to the Scanner.
  * Sends a data validation failure command, sends a warning to the screen, and voids output.
- * Additionally, shifts `previousScanStore` to the `decodeResults` content. 
- * Returns the new `previousScanStore` array.
- * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
  * @param {*} output - The `output` module created by the Scanner.
- * @param {*} previousScanStore - The `previousScanStore` array initialized in the beginning of the script.
  * @param {string} message - An optional message to show instead of the default Data Validation failure message.
- * @returns {string[]}
+ * @returns {*} a modified `output` module.
  */
-function dataValidationError(rawResults, output, previousScanStore, message = "<DataValidationErrorMessage>") {
+function dataValidationError(output, message = "<DataValidationErrorMessage>") {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
     output.OLED = message;
     output.content = "";
-    // update the last scan
-    previousScanStore.shift();
-    previousScanStore.push(rawResults);
-    return [previousScanStore, output];
+    return output;
 }
 
 /**
  * Throws a consolidation error to the Scanner.
  * Sends a data validation command, sends a warning to the screen, and voids output.
- * Additionally, shifts `previousScanStore` to the `decodeResults` content.
- * Returns the new `previousScanStore` array
- * @param {*} decodeResults - The `decodeResults` produced by the Scanner.
  * @param {*} output - The `output` module created by the Scanner.
- * @param {*} previousScanStore - The `previousScanStore` array initialized in the beginning of the script.
  * @param {string} message - An optional message to show instead of the default Data Validation failure message.
- * @returns {string[]}
+ * @returns {*} A modified `output` module.
  */
-function consolidationError(rawResults, output, previousScanStore, message = "<ConsolidationErrorMessage>") {
+function consolidationError(output, message = "<ConsolidationErrorMessage>") {
     dmccCommand("OUTPUT.DATAVALID-FAIL");
     output.OLED = message;
     output.content = "";
-    // update the last scan
-    previousScanStore.shift();
-    previousScanStore.push(rawResults);
-    return [previousScanStore, output];
+    return output;
 }
