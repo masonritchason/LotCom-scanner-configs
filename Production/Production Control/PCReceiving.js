@@ -176,7 +176,7 @@ function generateOutputString(readerProperties, processedResultList) {
     // add the IP address of the scanner to the output
     // REPLACE ME -- BUT DON'T COMMIT TO GITHUB!
     // CONFIGURE THIS ON THE INDIVIDUAL SCANNER
-    outputString += "," + "<ip>";
+    outputString += "," + "<ip>,Supplier";
     // add the processed Scan results to the output
     for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);
