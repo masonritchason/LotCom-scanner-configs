@@ -203,8 +203,8 @@ function dataValidationError(decodeResults, output, previousScan, message = "<Da
  * @returns {boolean}
  */
 function validatePONumber(string) {
-	// set a regex pattern for PO Number format (0-9A-Za-z-_) and check it
-	var poPattern = /^[\w\-]+$/;
+	// set a regex pattern for PO Number format (0-9A-Za-z) and check it
+	var poPattern = /^[\w]+$/;
 	if (poPattern.test(string)) {
 		return true;	
 	} else {
