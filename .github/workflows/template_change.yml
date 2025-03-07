@@ -5,8 +5,6 @@ on:
     branches:
       - main
 
-env: SCANNER_CONFIG_FILES = [Production\Deburr\Deburr.js, Production\Production Control\PCReceiving.js, Production\Production Control\PCStocking.js, Production\Steel\Civic Assembly\CivicAssembly.js, Production\Steel\Civic Pivot Housing MC\PivotHousingMC.js, Production\Steel\Civic Shaft Clinch\CivicShaftClinch.js]
-
 jobs:
   changed_files:
     runs-on: windows-latest
@@ -28,11 +26,8 @@ jobs:
         run: |
           if ($env:ALL_CHANGED_FILES -contains "Script Blocks\Template_v2.js") {
             Write-Host "The template was changed"
-            # create an update issue for each scanner config file
-            foreach ($configuration in $env:SCANNER_CONFIG_FILES) {
-              # create an issue
-              gh issue create --title "Update $file to match template" --project "Scanner Configuration To-Do" --assignee "masonritchason" --label "enhancement" --body "The template has been changed. Please update this file to match the changes and upload the modified script to the appropriate scanner(s)."
-            }
+            # create an update issue for scanner config files
+            gh issue create --title "Update Configurations to match template" --project "Scanner Configuration To-Do" --assignee "masonritchason" --label "enhancement" --body "The template has been changed. Please update Scanner Configurations to match the changes and upload the modified scripts to the appropriate scanners."
           } else {
             Write-Host "The template was not changed"
           }
