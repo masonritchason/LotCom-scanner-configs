@@ -28,7 +28,7 @@ jobs:
           if ($env:ALL_CHANGED_FILES.Contains("Script Blocks\Template_v2.js")) {
             Write-Host "The template was changed"
             # create an update issue for scanner config files
-            gh issue create --title "Update Configurations to match template" --project "Scanner Configuration To-Do" --assignee "masonritchason" --label "enhancement" --body "The template has been changed. Please update Scanner Configurations to match the changes and upload the modified scripts to the appropriate scanners."
+            gh issue create --title "Update Configurations to match template" --project "https://github.com/orgs/LotCoM/projects/1" --assignee "masonritchason" --label "enhancement" --body "The template has been changed. Please update Scanner Configurations to match the changes and upload the modified scripts to the appropriate scanners."
           } else {
             Write-Host "The template was not changed"
           }
