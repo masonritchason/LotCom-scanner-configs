@@ -470,6 +470,8 @@ function validatePartNumber(string) {
  * @returns {boolean}
  */
 function validateDateNoTime(string) {
+    // remove the timestamp from the string (if needed)
+    string = string.split("-")[0];
     // set a regex pattern for Date format
     var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d$/;
 	if (datePattern.test(string)) {
