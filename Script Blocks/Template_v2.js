@@ -11,7 +11,7 @@
  * 
  * Supplier & WIP Dual Scanning Logic included.
  * 
- * To modify for a specific process, Ctrl+F for "REPLACE ME" and make changes as needed.
+ * To configure for a specific process, Ctrl+F for "REPLACE ME" and make changes as needed.
  */
 
 

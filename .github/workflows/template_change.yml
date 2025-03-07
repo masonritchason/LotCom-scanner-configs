@@ -21,6 +21,7 @@ jobs:
 
       - name: List all changed files
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         shell: pwsh
         run: |
