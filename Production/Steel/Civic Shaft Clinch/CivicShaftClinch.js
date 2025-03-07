@@ -1,15 +1,11 @@
 
 
 /**
- * Template Scanner Configuration.
- * 
- * Boilerplate code for all Scanner Configurations.
+ * Civic Shaft Clinch Scanner Configuration.
  * 
  * Consolidation Logic included.
  * 
  * Data Field Format Validation included.
- * 
- * To modify for a specific process, Ctrl+F for "REPLACE ME" and make changes as needed.
  */
 
 
@@ -84,13 +80,29 @@ function onResult(decodeResults, readerProperties, output) {
     }
 
     // not a partial label scan
+    // allow supplier parts (Y/N)
+    var acceptsSupplierComponents = true;
     // verify correct previous process (1st field on QR Code)
-    // REPLACE ME
-    var previousProcess = "<previousProcessTitle>";
+    var previousProcess = "4159 - Uppershaft MC";
     if (!processedResults[0] == previousProcess) {
-        // REPLACE ME
-        output = dataValidationError(output, "Invalid Label. Please scan a <previousProcess> Label.");
-        return;
+        // if the Label wasn't a valid WIP, check if supplier parts are accepted
+        if (acceptsSupplierComponents) {
+            // REPLACE ME
+            /**
+             * Do Supplier Logic Here
+             */
+            if (false) {
+
+            // supplier Label was invalid; throw an error
+            } else {
+                output = dataValidationError(output, "Invalid Supplier Label. Please scan a valid Component Part Label.");
+                return;
+            }
+        // suppliers not accepted; throw an error
+        } else {
+            output = dataValidationError(output, "Invalid WIP Label. Please scan an Uppershaft MC Label.");
+            return;
+        }
     }
 
     // check for and perform any needed consolidations
@@ -117,26 +129,41 @@ function onResult(decodeResults, readerProperties, output) {
         processedResults = processResultString(consolidatedLabel);
     }
 
-    // REPLACE ME
-    /**
-     * 
-     * 
-     * 
-     * 
-     * Add additional scan result validation conditions here.
-     * Call the dataValidationError() method if any condition fails.
-     * 
-     * 
-     * 
-     * 
-     */
-    
+    // validate that the second field is a Part Number
+    if (!validatePartNumber(processedResults[1])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Part Number.");
+        return;
+    }
+    // validate that the third field is a Quantity
+    if (!validateQuantity(processedResults[2])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Quantity.");
+        return;
+    }
+    // validate that the fourth field is a Lot Number
+    if (!validateLotNumber(processedResults[3])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Lot Number.");
+        return;
+    }
+    // validate that the fifth field is a Model Number
+    if (!validateModel(processedResults[4])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Model Number.");
+        return;
+    }
+    // validate that the sixth field is a Date
+    if (!validateDateNoTime(processedResults[5])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Date.");
+        return;
+    }
+    // validate that the seventh field is a Shift Number
+    if (!validateShiftNumber(processedResults[6])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Shift Number.");
+        return;
+    }
     // all checks, consolidations, and validations were passed
     // generate a final output string, send it to the output module, and show a message on the screen
     var finalOutput = generateOutputString(readerProperties, processedResults);
     output.content = finalOutput;
-    // REPLACE ME
-    output.OLED = "<Message>";
+    output.OLED = "Label captured successfully.";
 }
 
 
@@ -419,26 +446,8 @@ function consolidateLabels(partialScanStore, rawResults, output) {
  * Format Validator Methods.
  * 
  * Call each to validate the needed fields for each Label type.
- * 
- * Remove unused methods to avoid loading useless script onto the Scanner.
- * REPLACE ME
  */
 
-
-/**
- * Validates a string as a PO Number using a regular expression test.
- * @param {string} string 
- * @returns {boolean}
- */
-function validatePONumber(string) {
-	// set a regex pattern for PO Number format (0-9A-Za-z) and check it
-	var poPattern = /^[\w]+$/;
-	if (poPattern.test(string)) {
-		return true;	
-	} else {
-		return false;	
-	}	
-}
 
 /**
  * Validates a string as a Part Number using a regular expression test.
@@ -494,25 +503,6 @@ function validateShiftNumber(string) {
 }
 
 /**
- * Validates a string as a JBK Number. Enforces three-length format; returns the string in this format.
- * @param {string} string 
- * @returns {boolean | Array}
- */
-function validateJBKNumber(string) {
-    // set a regex pattern for JBK numbers
-    var jbkPattern = /^[\d]?[\d]?[\d]$/;
-    if (jbkPattern.test(string)) {
-        // ensure JBK is three digits by adding 0s
-        while (string.length < 3) {
-            string = "0" + string;
-        }
-		return [true, string];	
-	} else {
-        return false;
-    }
-}
-
-/**
  * Validates a string as a Lot Number.
  * @param {string} string 
  * @returns {boolean}
@@ -551,21 +541,6 @@ function validateQuantity(string) {
     // set a regex pattern for Quantities
     var quantityPattern = /^\d+$/;
     if (quantityPattern.test(string)) {
-		return true;	
-	} else {
-        return false;
-    }
-}
-
-/**
- * Validates a string as a Die Number.
- * @param {string} string 
- * @returns {boolean}
- */
-function validateDieNumber(string) {
-    // set a regex pattern for Die Numbers
-    var diePattern = /^\d?\d?\d$/;
-    if (diePattern.test(string)) {
 		return true;	
 	} else {
         return false;
