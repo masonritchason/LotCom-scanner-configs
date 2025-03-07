@@ -80,23 +80,37 @@ function onResult(decodeResults, readerProperties, output) {
     }
 
     // not a partial label scan
-    // allow supplier parts (Y/N)
+    // configure allowance of supplier parts (Y/N) and supplier label controls
     var acceptsSupplierComponents = true;
-    // verify correct previous process (1st field on QR Code)
+    var acceptedSupplierPartNumbers = [
+        "00-T20-53316-0000-Z3",
+        "00-T20-5331K-A100-YB0",
+        "00-T20-533EY-A000-Y01",
+        "YN-T20-53392-A000-Y01",
+        "00-TBA-53326-A020-YA0",
+        "00-SLN-53328-A010-YB1",
+        "00-SLN-53330-A010-YA0",
+        "00-T20-533AA-A000-Y01",
+        "00-3W0-533AA-A000-Y04",
+        "00-TBA-53323-A020-YB2",
+        "00-3W0-53323-A000-Y01"
+    ];
+    var isLabelSupplier = false;
+
+    // verify correct previous WIP process (1st field on QR Code)
     var previousProcess = "4159 - Uppershaft MC";
     if (!processedResults[0] == previousProcess) {
         // if the Label wasn't a valid WIP, check if supplier parts are accepted
         if (acceptsSupplierComponents) {
-            // REPLACE ME
-            /**
-             * Do Supplier Logic Here
-             */
-            if (false) {
-
-            // supplier Label was invalid; throw an error
-            } else {
+            // validate the supplier component label formats
+            var validSupplierLabel = validateSupplierLabel(processedResults);
+            // supplier label was invalid; throw an error
+            if (!validSupplierLabel) {
                 output = dataValidationError(output, "Invalid Supplier Label. Please scan a valid Component Part Label.");
                 return;
+            // label is a valid supplier label; update the isSupplierLabel flag
+            } else {
+                isLabelSupplier = true;
             }
         // suppliers not accepted; throw an error
         } else {
@@ -106,62 +120,65 @@ function onResult(decodeResults, readerProperties, output) {
     }
 
     // check for and perform any needed consolidations
-    var consolidationResults = consolidateLabels(partialScanStore, rawResults, output);
-    // confirm that the consolidation was either not required or successful
-    if (consolidationResults[0] && consolidationResults[1] == null) {
-        // consolidation was required and failed; throw the error from the consolidationResults
+    if (!isLabelSupplier) {
+        var consolidationResults = consolidateLabels(partialScanStore, rawResults, output);
+        // confirm that the consolidation was either not required or successful
+        if (consolidationResults[0] && consolidationResults[1] == null) {
+            // consolidation was required and failed; throw the error from the consolidationResults
+            output = consolidationResults[2];
+            return;
+        }
+        // either a consolidation was required and succeeded or no consolidation was required
+        var consolidatedLabel = null;
+        if (consolidationResults[0]) {
+            // consolidation was required and succeeded; set the output content and the OLED Message
+            consolidatedLabel = consolidationResults[1];
+        }
+        // save the modified output module (this is all that needs to happen if no consolidation was made)
         output = consolidationResults[2];
-        return;
-    }
-    // either a consolidation was required and succeeded or no consolidation was required
-    var consolidatedLabel = null;
-    if (consolidationResults[0]) {
-        // consolidation was required and succeeded; set the output content and the OLED Message
-        consolidatedLabel = consolidationResults[1];
-    }
-    // save the modified output module (this is all that needs to happen if no consolidation was made)
-    output = consolidationResults[2];
-    // clear the partial scan store
-    partialScanStore = ["", ""];
+        // clear the partial scan store
+        partialScanStore = ["", ""];
 
-    // update the processed result to a processed version of the consolidated label (only if a consolidation occurred)
-    if (consolidatedLabel != null) {
-        processedResults = processResultString(consolidatedLabel);
-    }
+        // update the processed result to a processed version of the consolidated label (only if a consolidation occurred)
+        if (consolidatedLabel != null) {
+            processedResults = processResultString(consolidatedLabel);
+        }
 
-    // validate that the second field is a Part Number
-    if (!validatePartNumber(processedResults[1])) {
-        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Part Number.");
-        return;
+        // validate that the second field is a Part Number
+        if (!validatePartNumber(processedResults[1])) {
+            output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Part Number.");
+            return;
+        }
+        // validate that the third field is a Quantity
+        if (!validateQuantity(processedResults[2])) {
+            output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Quantity.");
+            return;
+        }
+        // validate that the fourth field is a Lot Number
+        if (!validateLotNumber(processedResults[3])) {
+            output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Lot Number.");
+            return;
+        }
+        // validate that the fifth field is a Model Number
+        if (!validateModel(processedResults[4])) {
+            output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Model Number.");
+            return;
+        }
+        // validate that the sixth field is a Date
+        if (!validateDateNoTime(processedResults[5])) {
+            output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Date.");
+            return;
+        }
+        // validate that the seventh field is a Shift Number
+        if (!validateShiftNumber(processedResults[6])) {
+            output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Shift Number.");
+            return;
+        }
     }
-    // validate that the third field is a Quantity
-    if (!validateQuantity(processedResults[2])) {
-        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Quantity.");
-        return;
-    }
-    // validate that the fourth field is a Lot Number
-    if (!validateLotNumber(processedResults[3])) {
-        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Lot Number.");
-        return;
-    }
-    // validate that the fifth field is a Model Number
-    if (!validateModel(processedResults[4])) {
-        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Model Number.");
-        return;
-    }
-    // validate that the sixth field is a Date
-    if (!validateDateNoTime(processedResults[5])) {
-        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Date.");
-        return;
-    }
-    // validate that the seventh field is a Shift Number
-    if (!validateShiftNumber(processedResults[6])) {
-        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Shift Number.");
-        return;
-    }
+    
     // all checks, consolidations, and validations were passed
     // generate a final output string, send it to the output module, and show a message on the screen
-    var finalOutput = generateOutputString(readerProperties, processedResults);
+    var finalOutput = generateOutputString(readerProperties, processedResults, isLabelSupplier);
     output.content = finalOutput;
     output.OLED = "Label captured successfully.";
 }
@@ -216,9 +233,10 @@ function processResultString(raw) {
  * Creates a final, formatted string that can be sent to the output module.
  * @param {Array} readerProperties - The `readerProperties` item created by the Scanner.
  * @param {string[]} processedResultList - The list of processed fields created by `processResultString()`
+ * @param {bool} isLabelSupplier Flag identifying the Label as a Supplier Label (for output tagging).
  * @returns {null}
  */
-function generateOutputString(readerProperties, processedResultList) {
+function generateOutputString(readerProperties, processedResultList, isLabelSupplier) {
     // create a month name -> number conversion dictionary
     var monthConversions = {
         "Jan": "01",
@@ -250,6 +268,10 @@ function generateOutputString(readerProperties, processedResultList) {
     // REPLACE ME -- BUT DON'T COMMIT TO GITHUB!
     // CONFIGURE THIS ON THE INDIVIDUAL SCANNER
     outputString += "," + "<ip>";
+    // add the supplier tag if needed
+    if (isLabelSupplier) {
+        outputString += ",Supplier-Component"
+    }
     // add the processed Scan results to the output
     for (var i = 0; i < processedResultList.length; i++) {
         outputString += "," + String(processedResultList[i]);
@@ -545,6 +567,21 @@ function validateQuantity(string) {
 	} else {
         return false;
     }
+}
+
+
+function validateSupplierLabel(processedResults) {
+    // validate that the first field is a Part Number
+    if (!validatePartNumber(processedResults[1])) {
+        return false;
+    }
+    // validate that the second field is a Quantity
+    if (!validatePartNumber(processedResults[1])) {
+        output = dataValidationError(output, "Invalid Uppershaft MC Label or Invalid Part Number.");
+        return;
+    }
+    // validate that the third field is a Lot Number
+
 }
 
 
