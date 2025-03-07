@@ -36,8 +36,7 @@ function onResult(decodeResults, readerProperties, output) {
         return;
     }
         
-    // results decoded successfully
-    // save the raw results
+    // results decoded successfully; save the raw results
     var rawResults = decodeResults[0].content;
 
     // check the code output against the previously scanned code(s)
@@ -47,8 +46,7 @@ function onResult(decodeResults, readerProperties, output) {
         return;
     }
     
-    // not a duplicate scan
-    // shift out the previous scan and add the new scan into the list
+    // not a duplicate scan; shift out the previous scan and add the new scan into the list
     previousScanStore.shift();
     previousScanStore.push(rawResults);
 
@@ -87,8 +85,7 @@ function onResult(decodeResults, readerProperties, output) {
         }
     }
 
-    // not a partial label scan
-    // configure allowance of supplier parts (Y/N) and supplier label controls
+    // not a partial label scan; configure allowance of supplier parts (Y/N) and supplier label controls
     // REPLACE ME - TOGGLE AS NEEDED
     var acceptsSupplierComponents = true;
     // REPLACE ME - REMOVE IF ABOVE IS FALSE
