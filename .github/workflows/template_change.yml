@@ -26,3 +26,4 @@ jobs:
           for file in ${ALL_CHANGED_FILES}; do
             if [ "$file" == "Template_v2.js" ]; then
                 echo "The variable matches the string."
+          done
