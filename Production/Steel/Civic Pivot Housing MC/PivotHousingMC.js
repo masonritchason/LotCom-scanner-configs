@@ -124,11 +124,15 @@ function onResult(decodeResults, readerProperties, output) {
         output = dataValidationError(output, "Invalid Deburr Label or Invalid JBK Number.");
         return;
     }
-    if (!validateDateNoTime(processedResults[5])) {
+    if (!validateDieNumber(processedResults[5])) {
+        output = dataValidationError(output, "Invalid Deburr Label or Invalid Die Number.");
+        return;
+    }
+    if (!validateDateNoTime(processedResults[6])) {
         output = dataValidationError(output, "Invalid Deburr Label or Invalid Date.");
         return;
     }
-    if (!validateShiftNumber(processedResults[6])) {
+    if (!validateShiftNumber(processedResults[7])) {
         output = dataValidationError(output, "Invalid Deburr Label or Invalid Shift Number.");
         return;
     }
