@@ -528,8 +528,9 @@ function validateDateNoTime(string) {
  * @returns {boolean}
  */
 function validateShiftNumber(string) {
-    // check that the string is 1, 2, or 3
-    if (string == "1" || string == "2" || string == "3") {
+    // check that the string is 1-3 occurrences of ['1', '2', '3'], each separated by '&'
+    var shiftPattern = /^[0-9][\&]?[0-9]?[\&]?[0-9]?$/;
+    if (shiftPattern.test(string)) {
         return true;
     } else {
         return false;
@@ -592,7 +593,7 @@ function validateModel(string) {
  */
 function validateQuantity(string) {
     // set a regex pattern for Quantities
-    var quantityPattern = /^\d+$/;
+    var quantityPattern = /^[\d]+[\&]?[\d]+?[\&]?[\d]+?$/;
     if (quantityPattern.test(string)) {
 		return true;	
 	} else {
