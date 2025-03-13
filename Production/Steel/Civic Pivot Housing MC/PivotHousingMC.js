@@ -128,7 +128,7 @@ function onResult(decodeResults, readerProperties, output) {
         output = dataValidationError(output, "Invalid Deburr Label or Invalid Die Number.");
         return;
     }
-    if (!validateDateNoTime(processedResults[6])) {
+    if (!validateDate(processedResults[6])) {
         output = dataValidationError(output, "Invalid Deburr Label or Invalid Date.");
         return;
     }
@@ -452,13 +452,13 @@ function validatePartNumber(string) {
 }
 
 /**
- * Validates a string as a Date (without a timestamp) using a regular expression test.
+ * Validates a string as a Date using a regular expression test.
  * @param {string} string 
  * @returns {boolean}
  */
-function validateDateNoTime(string) {
+function validateDate(string) {
     // set a regex pattern for Date format
-    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d$/;
+    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d\-\d\d?\:\d\d?\:\d\d?$/;
 	if (datePattern.test(string)) {
 		return true;	
 	} else {

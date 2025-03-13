@@ -506,15 +506,13 @@ function validatePartNumber(string) {
 }
 
 /**
- * Validates a string as a Date (without a timestamp) using a regular expression test.
+ * Validates a string as a Date using a regular expression test.
  * @param {string} string 
  * @returns {boolean}
  */
-function validateDateNoTime(string) {
-    // remove the timestamp from the string (if needed)
-    string = string.split("-")[0];
+function validateDate(string) {
     // set a regex pattern for Date format
-    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d$/;
+    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d\-\d\d?\:\d\d?\:\d\d?$/;
 	if (datePattern.test(string)) {
 		return true;	
 	} else {

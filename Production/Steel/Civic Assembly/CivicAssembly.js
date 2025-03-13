@@ -174,7 +174,7 @@ function onResult(decodeResults, readerProperties, output) {
             return;
         }
         // validate the third to last field as the date
-        if (!validateDateNoTime(processedResults[processedResults.length - 3])) {
+        if (!validateDate(processedResults[processedResults.length - 3])) {
             output = dataValidationError(output, "Invalid WIP Label or Invalid Date.");
             return;
         }
@@ -533,13 +533,13 @@ function validatePartNumber(string) {
 }
 
 /**
- * Validates a string as a Date (without a timestamp) using a regular expression test.
+ * Validates a string as a Date using a regular expression test.
  * @param {string} string 
  * @returns {boolean}
  */
-function validateDateNoTime(string) {
+function validateDate(string) {
     // set a regex pattern for Date format
-    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d$/;
+    var datePattern = /^\d?\d\/\d?\d\/\d\d\d\d\-\d\d?\:\d\d?\:\d\d?$/;
 	if (datePattern.test(string)) {
 		return true;	
 	} else {
