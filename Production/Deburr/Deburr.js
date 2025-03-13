@@ -115,17 +115,17 @@ function onResult(decodeResults, readerProperties, output) {
     if (!validatePartNumber(processedResults[1])) {
         output = dataValidationError(output, "Invalid Diecast Label or Invalid Part Number.");
         return;
-    } 
-    if (!validateDieNumber(processedResults[3])) {
-        output = dataValidationError(output, "Invalid Diecast Label or Invalid Die Number.");
-        return;
-    } 
-    if (!validateQuantity(processedResults[4])) {
+    }  
+    if (!validateQuantity(processedResults[3])) {
         output = dataValidationError(output, "Invalid Diecast Label or Invalid Quantity.");
         return;
     } 
-    if (!validateJBKNumber(processedResults[5])) {
+    if (!validateJBKNumber(processedResults[4])) {
         output = dataValidationError(output, "Invalid Diecast Label or Invalid JBK Number.");
+        return;
+    }
+	if (!validateDieNumber(processedResults[5])) {
+        output = dataValidationError(output, "Invalid Diecast Label or Invalid Die Number.");
         return;
     } 
     if (!validateDateNoTime(processedResults[6])) {
