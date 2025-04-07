@@ -119,7 +119,7 @@ function onResult(decodeResults, readerProperties, output) {
     // test whether the label is YNA In-House or Supplier
     var labelOrigin = "";
     // create a list of WIP processes allowed in Civic Assembly
-    var allowedProcesses = ["PivotHousingMC", "UppershaftMC", "TiltBracketWeld", "PipeWeld", "ShaftClinch"];
+    var allowedProcesses = ["4155-CIV-Pipe-Weld", "4155-CIV-Tilt-Brkt-Weld", "4159-STL-Uppershaft-MC", "4162-CIV-Shaft-Clinch", "4165-CIV-Pivot-Housing-MC"];
     // check if the Label is in-house WIP
     if (isStringInArray(allowedProcesses, processedResults[0])) {
         // in-house WIP Label
@@ -419,8 +419,8 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
     var splitPartial = partialLabel.split("|");
     var splitFull = fullLabel.split("|");
     // retrieve the quantity, shift, and operator information from each Split Label
-    var quantityPartial = splitPartial.splice(3, 1);
-    var quantityFull = splitFull.splice(2, 1);
+    var quantityPartial = splitPartial.splice(4, 1);
+    var quantityFull = splitFull.splice(3, 1);
     var shiftPartial = splitPartial.splice(splitPartial.length - 2, 1);
     var shiftFull = splitFull.splice(splitFull.length - 2, 1);
     var operatorPartial = splitPartial.splice(splitPartial.length - 1, 1);
@@ -434,7 +434,8 @@ function consolidateWithFullLabel(partialLabel, fullLabel) {
     // create a new FULL Label string with the paired/existing label info
     // add the first 4 mandatory fields (process|part|quantity|serial number)
     var fullLabelFront = splitFull.splice(0, 1) + "|" +  // process title
-                         splitFull.splice(0, 1) + "|" +  // part number/name
+                         splitFull.splice(0, 1) + "|" +  // part number
+                         splitFull.splice(0, 1) + "|" +  // part name
                          quantityPair + "|" +            // paired quantities 
                          splitFull.splice(0, 1) + "|";   // serial number (jbk/lot)
     // create the back-end of the Full Label string (date|shift|operator)
