@@ -254,7 +254,7 @@ function checkPartialSerialNumbers(partialLabel1, partialLabel2) {
     var splitLabel1 = partialLabel1.split("|");
     var splitLabel2 = partialLabel2.split("|");
     // verify that the two Labels have a matching serial number in position 4 (5th field)
-    return (splitLabel1[4] == splitLabel2[4]);
+    return (splitLabel1[5] == splitLabel2[5]);
 }
 
 /**
@@ -268,7 +268,7 @@ function checkFullSerialNumbers(partialLabel, fullLabel) {
     var splitPartialLabel = partialLabel.split("|");
     var splitFullLabel = fullLabel.split("|");
     // verify that the two Labels have a matching serial number (position 4 for Partial, position 3 for Full)
-    return (splitPartialLabel[4] == splitFullLabel[3]);
+    return (splitPartialLabel[5] == splitFullLabel[4]);
 }
 
 /**
@@ -287,8 +287,8 @@ function consolidatePartialLabels(partialLabel1, partialLabel2) {
     var splitLabel1 = partialLabel1.split("|");
     var splitLabel2 = partialLabel2.split("|");
     // retrieve the quantity, shift, and operator information from each Split Label
-    var quantity1 = splitLabel1.splice(3, 1);
-    var quantity2 = splitLabel2.splice(3, 1);
+    var quantity1 = splitLabel1.splice(4, 1);
+    var quantity2 = splitLabel2.splice(4, 1);
     var shift1 = splitLabel1.splice(splitLabel1.length - 2, 1);
     var shift2 = splitLabel2.splice(splitLabel2.length - 2, 1);
     var operator1 = splitLabel1.splice(splitLabel1.length - 1, 1);
@@ -303,7 +303,8 @@ function consolidatePartialLabels(partialLabel1, partialLabel2) {
     // add the first 5 mandatory fields (partial|process|part|quantity|serial number)
     var partialLabelFront = "PARTIAL|" +                        // partial flag
                             splitLabel2.splice(0, 1) + "|" +    // process title
-                            splitLabel2.splice(0, 1) + "|" +    // part number/name
+                            splitLabel2.splice(0, 1) + "|" +    // part number
+                            splitLabel2.splice(0, 1) + "|" +    // part name
                             quantityPair + "|" +                // paired quantities 
                             splitLabel2.splice(0, 1) + "|";     // serial number (jbk/lot)
     // create the back-end of the partial label string (date|shift|operator)
