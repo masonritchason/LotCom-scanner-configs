@@ -74,6 +74,7 @@ function onResult(decodeResults, readerProperties, output) {
         "YN-3W0-53310-A000-YB3",    // SHAFT COMP, STRG (NO)
         "YN-3W0-53310-A100-Y02",    // SHAFT COMP, STRG (ELC)
         "00-T6L-53322-H010-YA0",    // STOPPER RING
+        "00-T6L-53322-H010",        // STOPPER RING
         "00-SNA-533AF-A040-Y2"      // STOPPER, SLIDE SHAFT
     ];
 
