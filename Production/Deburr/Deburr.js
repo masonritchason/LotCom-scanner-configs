@@ -318,8 +318,8 @@ function validateDate(string) {
  * @returns {boolean}
  */
 function validateShiftNumber(string) {
-    // check that the string is 1-3 occurrences of ['1', '2', '3'], each separated by '&'
-    var shiftPattern = /^[0-9][\&]?[0-9]?[\&]?[0-9]?$/;
+    // check that the string is 1-3 occurrences of ['1', '2', '3'], each separated by ':'
+    var shiftPattern = /^[0-9][\:]?[0-9]?[\:]?[0-9]?$/;
     if (shiftPattern.test(string)) {
         return true;
     } else {
@@ -368,7 +368,7 @@ function validateLotNumber(string) {
  */
 function validateQuantity(string) {
     // set a regex pattern for Quantities
-    var quantityPattern = /^[\d]+[\&]?[\d]+?[\&]?[\d]+?$/;
+    var quantityPattern = /^[\d]+[\:]?[\d]+?[\:]?[\d]+?$/;
     if (quantityPattern.test(string)) {
 		return true;	
 	} else {
