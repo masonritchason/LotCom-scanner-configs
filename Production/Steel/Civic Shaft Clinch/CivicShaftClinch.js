@@ -45,9 +45,10 @@ function onResult(decodeResults, readerProperties, output) {
     // process the initial results
     var processedResults = processResultString(rawResults);
 
-    // not a partial label scan; configure allowance of supplier parts (Y/N) and supplier label controls
+    // configure allowance of supplier parts and globally accepted parts
     var acceptsSupplierComponents = true;
-    var acceptedSupplierPartNumbers = [
+    // REPLACE ME - SET ACCEPTED PART NUMBERS
+    var acceptedPartNumbers = [
         "00-T20-53316-0000-Z3",
         "00-T20-5331K-A100-YB0",
         "00-T20-533EY-A000-Y01",
@@ -61,37 +62,17 @@ function onResult(decodeResults, readerProperties, output) {
         "00-3W0-53323-A000-Y01"
     ];
 
-    // verify correct previous WIP process (1st field on QR Code)
+    // identify the source of the Label as either WIP, Supplier, or none
     var previousProcess = "4159-STL-Uppershaft-MC";
     if (processedResults[0] == previousProcess) {
         labelOriginType = "YNA";
-    }
-    
-    // if the label wasn't marked as INHOUSE, check if suppliers are accepted
-    if (labelOriginType != "YNA") {
-        if (!acceptsSupplierComponents) {
-            // Suppliers are not accepted and WIP is invalid; throw an error
-            output = dataValidationError(output, "Invalid WIP Label. Please scan a valid WIP Label.");
-            return;
-        } else {
-            // Suppliers are accepted; toggle the flag to set the Label as a Supplier Label
-            labelOriginType = "SUPPLIER";
-        }
-    }
-    
-    // if the label wasn't marked as YNA and this block is reached, the scanner does accept supplier parts
-    if (labelOriginType == "SUPPLIER") {
-        // valid format for supplier label; confirm that the part number is an acceptable part number
-        if (!isStringInArray(acceptedSupplierPartNumbers, processedResults[0].toUpperCase())) {
-            // component part is not valid; throw an error
-            output = dataValidationError(output, "Invalid Supplier Component Part Number. Please scan a valid Supplier Component Part Label.");
-            return;
-        }
-        // part number is valid, cast this number to uppercase permanently
-        else {
-            processedResults[0] = processedResults[0].toUpperCase();
-        }
-    }
+    } else if (!acceptsSupplierComponents) {
+		// Suppliers are not accepted and WIP is invalid; throw an error
+        output = dataValidationError(output, "Invalid WIP Label. Please scan a valid WIP Label.");
+        return;
+	} else {
+		labelOriginType = "SUPPLIER";
+	}
 
     // if the label was not marked as INHOUSE or SUPPLIER, throw an error
     if (labelOriginType == null) {
@@ -101,9 +82,11 @@ function onResult(decodeResults, readerProperties, output) {
 
     // validate WIP label fields
     if (labelOriginType == "YNA") {
-        // validate that the second field is a Part Number
-        if (!validatePartNumber(processedResults[1])) {
-            output = dataValidationError(output, "Invalid Uppershaft M/C Label or Invalid Part Number.");
+        // validate part number
+        var partNumber = processedResults[1].toUpperCase();
+        processedResults[1] = partNumber;
+        if (!validatePartNumber(partNumber, acceptedPartNumbers)) {
+            output = dataValidationError(output, "Invalid WIP Label or Invalid Part Number.");
             return;
         }
         // validate that the fourth field is a Quantity
@@ -128,11 +111,14 @@ function onResult(decodeResults, readerProperties, output) {
         }
     // validate Supplier Label fields
     } else if (labelOriginType == "SUPPLIER") {
-        // validate part number and name, lot number, quantity, and a possible serial number
-        if (!validatePartNumber(processedResults[0])) {
+        // validate part number
+        var partNumber = processedResults[0].toUpperCase();
+        processedResults[0] = partNumber;
+        if (!validatePartNumber(partNumber, acceptedPartNumbers)) {
             output = dataValidationError(output, "Invalid Supplier Label or Invalid Part Number.");
             return;
         }
+        // validate other fields
         if (!validateLotNumber(processedResults[2])) {
             output = dataValidationError(output, "Invalid Supplier Label or Invalid Lot Number.");
             return;
@@ -263,32 +249,21 @@ function generateOutputString(readerProperties, processedResultList) {
  * Format Validator Methods.
  * 
  * Call each to validate the needed fields for each Label type.
- * 
- * Remove unused methods to avoid loading useless script onto the Scanner.
- * REPLACE ME
  */
 
 
 /**
  * Validates a string as a Part Number using a regular expression test.
- * @param {string} string 
+ * @param {string} string
+ * @param {string[]} acceptedPartNumbers
  * @returns {boolean}
  */
-function validatePartNumber(string) {
-	// set regex pattern for Part Numbers
-	var pnPattern1 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
-	var pnPattern2 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
-	var pnPattern3 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
-	// check for each of the defined part number formats
-	if (pnPattern1.test(string)) {
-		return true;	
-	}
-	if (pnPattern2.test(string)) {
-		return true;	
-	}
-	if (pnPattern3.test(string)) {
-		return true;	
-	}
+function validatePartNumber(string, acceptedPartNumbers) {
+	// confirm that the part is in the accepted list
+    if (isStringInArray(acceptedPartNumbers, string)) {
+        // part number is valid
+        return true;
+    }
 	// none of the checks were successful
 	return false;
 }

@@ -45,76 +45,56 @@ function onResult(decodeResults, readerProperties, output) {
     // process the initial results
     var processedResults = processResultString(rawResults);
 
-    // not a partial label scan; configure allowance of supplier parts (Y/N) and supplier label controls
+    // configure allowance of supplier parts and globally accepted parts
     var acceptsSupplierComponents = true;
-    var acceptedSupplierPartNumbers = [
-        "YN-T20-53200-A021-YE1",    // Column Assy, Strg
-        "YN-T20-53200-A121-YF1",    // Column Assy, Strg
-        "YN-3W0-53200-A001-YD1",    // Column Assy, Strg
-        "YN-3W0-53200-A101-YD1",    // Column Assy, Strg
-        "00-T20-532AP-A000-YB1",    // HOUSING, PIVOT*
-        "00-TBA-90751-A020-Y2",     // RIVET, COL. PIVOT*
-        "00-TBA-533BL-A020-YA1",    // LOWER BRKT*
-        "00-T20-532AS-A000-YB2",    // PIVOT HSG. COMP*
-        "00-T20-5321Z-A000-Y03",    // PIPE COMP (NO)
-        "00-T20-5321Z-A100-Y03",    // PIPE COMP (ELC)
-        "00-T20-533EX-A000-Y01",    // ANGULAR BRG. 43X30
-        "YN-T20-5333C-A000-Y00",    // GUIDE, SLIDE
-        "YN-TBA-53350-A020-YB0",    // TILT BRKT COMP
-        "YN-T20-53375-A000-Y01",    // WASH. 8MM TILT
-        "YN-T20-5336S-A000-Y03",    // LOCK LEVER SUB COMP
-        "YN-T20-5336L-A000-Y03",    // CAM A
-        "00-T20-53364-A000-Y01",    // BOLT, LOCK
-        "00-SNA-5337G-A020-YA0",    // BRG COMP, THRUST
-        "00-T20-53340-A000-Y03",    // NYLON NUT M8X1.25X9.8
-        "YN-TBA-53371-A020-YB1",    // ---
-        "00-TBA-53371-A020-YB0",    // SPG. COLUMN HANG.
-        "YN-T20-53310-A000-YB1",    // SHAFT COMP, STRG (NO)
-        "YN-T20-53310-A100-Y0B",    // SHAFT COMP, STRG (ELC)
-        "YN-3W0-53310-A000-YB3",    // SHAFT COMP, STRG (NO)
-        "YN-3W0-53310-A100-Y02",    // SHAFT COMP, STRG (ELC)
-        "00-T6L-53322-H010-YA0",    // STOPPER RING
-        "00-T6L-53322-H010",        // STOPPER RING
-        "00-SNA-533AF-A040-Y2"      // STOPPER, SLIDE SHAFT
+    var acceptedPartNumbers = [
+        "YN-T20-53200-A021-YE1",
+        "YN-T20-53200-A121-YF1",
+        "YN-3W0-53200-A001-YD1",
+        "YN-3W0-53200-A101-YD1",
+        "00-T20-532AP-A000-YB1",
+        "00-TBA-90751-A020-Y2",
+        "00-TBA-533BL-A020-YA1",
+        "00-T20-532AS-A000-YB2",
+        "00-T20-5321Z-A000-Y03",
+        "00-T20-5321Z-A100-Y03",
+        "00-T20-533EX-A000-Y01",
+        "YN-T20-5333C-A000-Y00",
+        "YN-TBA-53350-A020-YB0",
+        "YN-T20-53375-A000-Y01",
+        "YN-T20-5336S-A000-Y03",
+        "YN-T20-5336L-A000-Y03",
+        "00-T20-53364-A000-Y01",
+        "00-SNA-5337G-A020-YA0",
+        "00-T20-53340-A000-Y03",
+        "YN-TBA-53371-A020-YB1",
+        "00-TBA-53371-A020-YB0",
+        "YN-T20-53310-A000-YB1",
+        "YN-T20-53310-A100-Y0B",
+        "YN-3W0-53310-A000-YB3",
+        "YN-3W0-53310-A100-Y02",
+        "00-T6L-53322-H010-YA0",
+        "00-T6L-53322-H010",
+        "00-SNA-533AF-A040-Y2"
     ];
 
-    // verify correct previous WIP process (1st field on QR Code)
-    var previousProcess = [
+    // identify the source of the Label as either WIP, Supplier, or none
+    var previousProcesses = [
         "4155-CIV-Pipe-Weld", 
         "4155-CIV-Tilt-Brkt-Weld", 
         "4159-STL-Uppershaft-MC", 
         "4162-CIV-Shaft-Clinch", 
         "4165-CIV-Pivot-Housing-MC"
     ];
-    if (isStringInArray(previousProcess, processedResults[0])) {
+    if (isStringInArray(previousProcesses, processedResults[0])) {
         labelOriginType = "YNA";
-    }
-    
-    // if the label wasn't marked as INHOUSE, check if suppliers are accepted
-    if (labelOriginType != "YNA") {
-        if (!acceptsSupplierComponents) {
-            // Suppliers are not accepted and WIP is invalid; throw an error
-            output = dataValidationError(output, "Invalid WIP Label. Please scan a valid WIP Label.");
-            return;
-        } else {
-            // Suppliers are accepted; toggle the flag to set the Label as a Supplier Label
-            labelOriginType = "SUPPLIER";
-        }
-    }
-    
-    // if the label wasn't marked as YNA and this block is reached, the scanner does accept supplier parts
-    if (labelOriginType == "SUPPLIER") {
-        // valid format for supplier label; confirm that the part number is an acceptable part number
-        if (!isStringInArray(acceptedSupplierPartNumbers, processedResults[0].toUpperCase())) {
-            // component part is not valid; throw an error
-            output = dataValidationError(output, "Invalid Supplier Component Part Number. Please scan a valid Supplier Component Part Label.");
-            return;
-        }
-        // part number is valid, cast this number to uppercase permanently
-        else {
-            processedResults[0] = processedResults[0].toUpperCase();
-        }
-    }
+    } else if (!acceptsSupplierComponents) {
+		// Suppliers are not accepted and WIP is invalid; throw an error
+        output = dataValidationError(output, "Invalid WIP Label. Please scan a valid WIP Label.");
+        return;
+	} else {
+		labelOriginType = "SUPPLIER";
+	}
 
     // if the label was not marked as INHOUSE or SUPPLIER, throw an error
     if (labelOriginType == null) {
@@ -124,8 +104,10 @@ function onResult(decodeResults, readerProperties, output) {
 
     // validate WIP label fields
     if (labelOriginType == "YNA") {
-        // validate the second field as a Part Number
-        if (!validatePartNumber(processedResults[1])) {
+        // validate part number
+        var partNumber = processedResults[1].toUpperCase();
+        processedResults[1] = partNumber;
+        if (!validatePartNumber(partNumber, acceptedPartNumbers)) {
             output = dataValidationError(output, "Invalid WIP Label or Invalid Part Number.");
             return;
         }
@@ -175,11 +157,14 @@ function onResult(decodeResults, readerProperties, output) {
         }
     // validate Supplier Label fields
     } else if (labelOriginType == "SUPPLIER") {
-        // validate part number and name, lot number, quantity, and a possible serial number
-        if (!validatePartNumber(processedResults[0])) {
+        // validate part number
+        var partNumber = processedResults[0].toUpperCase();
+        processedResults[0] = partNumber;
+        if (!validatePartNumber(partNumber, acceptedPartNumbers)) {
             output = dataValidationError(output, "Invalid Supplier Label or Invalid Part Number.");
             return;
         }
+        // validate other fields
         if (!validateLotNumber(processedResults[2])) {
             output = dataValidationError(output, "Invalid Supplier Label or Invalid Lot Number.");
             return;
@@ -318,24 +303,16 @@ function generateOutputString(readerProperties, processedResultList) {
 
 /**
  * Validates a string as a Part Number using a regular expression test.
- * @param {string} string 
+ * @param {string} string
+ * @param {string[]} acceptedPartNumbers
  * @returns {boolean}
  */
-function validatePartNumber(string) {
-	// set regex pattern for Part Numbers
-	var pnPattern1 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
-	var pnPattern2 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
-	var pnPattern3 = /^[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+\-[a-zA-Z0-9]+$/;
-	// check for each of the defined part number formats
-	if (pnPattern1.test(string)) {
-		return true;	
-	}
-	if (pnPattern2.test(string)) {
-		return true;	
-	}
-	if (pnPattern3.test(string)) {
-		return true;	
-	}
+function validatePartNumber(string, acceptedPartNumbers) {
+	// confirm that the part is in the accepted list
+    if (isStringInArray(acceptedPartNumbers, string)) {
+        // part number is valid
+        return true;
+    }
 	// none of the checks were successful
 	return false;
 }
