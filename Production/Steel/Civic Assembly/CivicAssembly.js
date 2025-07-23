@@ -403,7 +403,7 @@ function validateModel(string) {
  */
 function validateQuantity(string) {
     // set a regex pattern for Quantities
-    var quantityPattern = /^[\d]+[\:]?[\d]+?[\:]?[\d]+?$/;
+    var quantityPattern = /^[0-9\:]+$/;
     if (quantityPattern.test(string)) {
 		return true;	
 	} else {
