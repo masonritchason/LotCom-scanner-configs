@@ -135,7 +135,7 @@ function onResult(decodeResults, readerProperties, output) {
     // generate a final output string, send it to the output module, and show a message on the screen
     var finalOutput = generateOutputString(readerProperties, processedResults);
     output.content = finalOutput;
-    output.OLED = "Deburr Label captured successfully.";
+    output.OLED = "Deburr JBK # " + processedResults[4] + " captured successfully.";
 }
 
 
